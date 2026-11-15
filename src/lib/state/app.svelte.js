@@ -1,6 +1,7 @@
 import { Spring, prefersReducedMotion } from 'svelte/motion';
 import { LADDER_CONFIG } from '@/data/ladder.js';
-import { DEFAULT_SEASON_ID, SEASONS } from '@/data/seasons/index.js';
+import { SEASONS as BUNDLED_SEASONS, sortSeasons } from '@/data/seasons/index.js';
+import { backend } from '@/lib/backend/index.js';
 import { createLadder } from '@/lib/ladder/createLadder.js';
 import { clamp } from '@/lib/math/util.js';
 import { buildSeasonModel } from '@/lib/model/buildSeasonModel.js';
@@ -78,11 +79,13 @@ class Probe {
 }
 
 class AppState {
-  seasons = SEASONS;
-  seasonId = $state(DEFAULT_SEASON_ID);
+  /** Seasons, oldest first. Starts as the bundled copy; `refreshSeasons` swaps in live data. */
+  seasons = $state(BUNDLED_SEASONS);
+  /** The newest season is shown first. */
+  seasonId = $state(BUNDLED_SEASONS.at(-1)?.id);
   probe = new Probe();
 
-  season = $derived(SEASONS.find((season) => season.id === this.seasonId) ?? SEASONS[0]);
+  season = $derived(this.seasons.find((season) => season.id === this.seasonId) ?? this.seasons.at(-1));
 
   // The model is always derived from the season's datapoints; a bad season
   // file surfaces as `error` instead of breaking the page.
@@ -110,6 +113,23 @@ class AppState {
 
   selectSeason(id) {
     this.seasonId = id;
+  }
+
+  /**
+   * Loads the seasons from the backend. Called on startup and after an admin
+   * changes anything, so the curve always reflects the stored datapoints.
+   * If the backend cannot be reached the current seasons stay on screen.
+   */
+  async refreshSeasons() {
+    try {
+      const live = await backend.listSeasons();
+      if (!live.length) return;
+      const hadSelection = live.some((season) => season.id === this.seasonId);
+      this.seasons = sortSeasons(live);
+      if (!hadSelection) this.seasonId = this.seasons.at(-1).id;
+    } catch (error) {
+      console.warn('Could not load live seasons; showing the bundled copy.', error);
+    }
   }
 }
 
