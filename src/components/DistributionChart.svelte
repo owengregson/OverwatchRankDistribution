@@ -101,7 +101,13 @@
 
   function onpointerdown(event) {
     if (event.button !== 0) return;
-    plot.setPointerCapture(event.pointerId);
+    // Capture keeps the drag alive when the pointer strays outside the chart.
+    // It can fail for a pointer that is already gone; the drag still works inside the chart.
+    try {
+      plot.setPointerCapture(event.pointerId);
+    } catch {
+      // Nothing to do.
+    }
     press = { x: event.clientX, moved: false };
     probe.follow(srFromEvent(event));
   }
