@@ -5,7 +5,10 @@
  */
 const files = import.meta.glob('./*.json', { eager: true, import: 'default' });
 
-export const SEASONS = Object.values(files).sort((a, b) => a.number - b.number);
+/** Oldest first: by year, then season number within the year. */
+export const SEASONS = Object.values(files).sort(
+  (a, b) => a.year - b.year || a.number - b.number,
+);
 
 /** The newest season is shown first. */
 export const DEFAULT_SEASON_ID = SEASONS.at(-1)?.id;

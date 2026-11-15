@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LADDER_CONFIG } from '../src/data/ladder.js';
-import season6 from '../src/data/seasons/season-6.json';
+import season from '../src/data/seasons/2026-season-5.json';
 import { createLadder } from '../src/lib/ladder/createLadder.js';
 import { cdf, probit } from '../src/lib/math/normal.js';
 import { buildSeasonModel } from '../src/lib/model/buildSeasonModel.js';
@@ -58,7 +58,7 @@ describe('ladder', () => {
 });
 
 describe('season model', () => {
-  const model = buildSeasonModel(season6, ladder);
+  const model = buildSeasonModel(season, ladder);
 
   it('passes exactly through two datapoints', () => {
     expect(model.cdf(3700)).toBeCloseTo(0.97, 9);
@@ -86,7 +86,7 @@ describe('season model', () => {
     expect(model.quantile(1)).toBe(5000);
   });
 
-  it('puts the median in Emerald for Season 6', () => {
+  it('puts the median in Emerald for 2026 Season 5', () => {
     expect(ladder.divisionAt(model.quantile(0.5)).tier.id).toBe('emerald');
   });
 
@@ -116,12 +116,12 @@ describe('season model', () => {
     expect(build([{ rank: 'Master 3', betterThan: 97 }, { rank: 'Master 2', betterThan: 96 }])).toThrow(/disagree/);
     expect(build([{ rank: 'Master 3', betterThan: 100 }, { rank: 'Master 2', betterThan: 98 }])).toThrow(/betterThan/);
     expect(build([{ betterThan: 50 }, { rank: 'Master 2', betterThan: 98 }])).toThrow(/exactly one/);
-    expect(build(season6.datapoints, { model: 'cubic' })).toThrow(/Unknown model/);
+    expect(build(season.datapoints, { model: 'cubic' })).toThrow(/Unknown model/);
   });
 });
 
 describe('readings', () => {
-  const model = buildSeasonModel(season6, ladder);
+  const model = buildSeasonModel(season, ladder);
 
   it('describes an SR', () => {
     const reading = readAt(model, ladder, 3750);
