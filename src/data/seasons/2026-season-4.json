@@ -1,0 +1,20 @@
+{
+  "id": "2026-season-4",
+  "year": 2026,
+  "number": 4,
+  "name": "2026: Season 4",
+  "model": "normal",
+  "datapoints": [
+    { "rank": "Silver 5", "betterThan": 4.9, "note": "Community graph of Season 4" },
+    { "rank": "Silver 3", "betterThan": 8.2, "note": "Community graph of Season 4" },
+    { "rank": "Gold 5", "betterThan": 16, "note": "Community graph of Season 4" },
+    { "rank": "Gold 3", "betterThan": 23.4, "note": "Community graph of Season 4" },
+    { "rank": "Platinum 5", "betterThan": 37.2, "note": "Community graph of Season 4" },
+    { "rank": "Platinum 3", "betterThan": 47.6, "note": "Community graph of Season 4" },
+    { "rank": "Emerald 5", "betterThan": 63.3, "note": "Community graph of Season 4" },
+    { "rank": "Emerald 3", "betterThan": 72.8, "note": "Community graph of Season 4" },
+    { "rank": "Diamond 5", "betterThan": 84.2, "note": "Community graph of Season 4" },
+    { "rank": "Diamond 3", "betterThan": 89.8, "note": "Community graph of Season 4" },
+    { "rank": "Master 5", "betterThan": 95.3, "note": "Community graph of Season 4" }
+  ]
+}

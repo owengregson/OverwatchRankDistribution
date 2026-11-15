@@ -23,23 +23,42 @@ const toDataUrl = (blob) =>
   });
 
 export function createLocalBackend(bundledSeasons) {
+  /** A bundled season as this backend stores it: every datapoint has an id. */
+  const seed = (season) => ({
+    ...season,
+    datapoints: season.datapoints.map((point) => ({ id: crypto.randomUUID(), ...point })),
+  });
+
   function load() {
+    let saved = null;
     try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (saved?.seasons) return { proofs: {}, ...saved };
+      saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     } catch {
-      // Corrupt or missing data: start again from the bundled seasons.
+      // Corrupt data: start again from the bundled seasons.
     }
-    return {
-      seasons: bundledSeasons.map((season) => ({
-        ...season,
-        datapoints: season.datapoints.map((point) => ({ id: crypto.randomUUID(), ...point })),
-      })),
-      submissions: [],
-      /** Proof images by path. */
-      proofs: {},
-      session: null,
-    };
+    if (!saved?.seasons) {
+      return {
+        seasons: bundledSeasons.map(seed),
+        /** Ids of the bundled seasons that have been copied in, so each is only ever copied once. */
+        seeded: bundledSeasons.map((season) => season.id),
+        submissions: [],
+        /** Proof images by path. */
+        proofs: {},
+        session: null,
+      };
+    }
+
+    // A season file added to the project since this browser's data was
+    // saved is copied in. One the admin has since deleted is not brought
+    // back: `seeded` remembers it was already copied. (Data saved before
+    // `seeded` existed counts the seasons it holds as the ones copied.)
+    const db = { proofs: {}, seeded: saved.seasons.map((season) => season.id), ...saved };
+    for (const season of bundledSeasons) {
+      if (db.seeded.includes(season.id)) continue;
+      db.seeded.push(season.id);
+      if (!db.seasons.some((existing) => existing.id === season.id)) db.seasons.push(seed(season));
+    }
+    return db;
   }
 
   const db = load();
