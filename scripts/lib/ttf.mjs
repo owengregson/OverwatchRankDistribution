@@ -205,5 +205,8 @@ export function loadFont(buffer) {
     return polygons;
   }
 
-  return { unitsPerEm, ascent, measure, layout };
+  /** Whether the font has a glyph for a character; one it lacks is drawn as an empty box. */
+  const has = (char) => cmap.has(char.codePointAt(0));
+
+  return { unitsPerEm, ascent, has, measure, layout };
 }

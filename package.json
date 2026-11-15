@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "images": "node scripts/make-og-image.mjs",
+    "images": "node scripts/make-og-image.mjs && node scripts/make-readme-images.mjs",
     "check:site": "node scripts/check-site.mjs"
   },
   "devDependencies": {
