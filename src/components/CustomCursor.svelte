@@ -112,6 +112,17 @@
       }, 120);
     }
 
+    /**
+     * pointerleave does not bubble, but a capturing listener on <html> still
+     * hears it for every element inside. Those fire, with no mouse movement
+     * to follow, when the chart captures the pointer on a click, and hiding
+     * on them let the system cursor flash through. Only <html> itself
+     * losing the pointer means the mouse left the page.
+     */
+    function onpointerleave(event) {
+      if (event.target === root) hide();
+    }
+
     const options = { capture: true, passive: true };
     window.addEventListener('pointermove', onpointermove, options);
     window.addEventListener('pointerdown', onpointerdown, options);
@@ -119,7 +130,7 @@
     window.addEventListener('pointercancel', onpointerup, options);
     // No pointer events arrive while a file is dragged in, or once the mouse is outside the page.
     window.addEventListener('dragenter', hide, options);
-    root.addEventListener('pointerleave', hide, options);
+    root.addEventListener('pointerleave', onpointerleave, options);
 
     return () => {
       hide();
@@ -128,7 +139,7 @@
       window.removeEventListener('pointerup', onpointerup, options);
       window.removeEventListener('pointercancel', onpointerup, options);
       window.removeEventListener('dragenter', hide, options);
-      root.removeEventListener('pointerleave', hide, options);
+      root.removeEventListener('pointerleave', onpointerleave, options);
     };
   });
 </script>
