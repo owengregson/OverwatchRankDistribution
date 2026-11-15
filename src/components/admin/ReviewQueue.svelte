@@ -6,8 +6,9 @@
 <script>
   import { flip } from 'svelte/animate';
   import ConfirmButton from '@/components/ConfirmButton.svelte';
+  import ProofImage from '@/components/admin/ProofImage.svelte';
   import RankBadge from '@/components/RankBadge.svelte';
-  import { fitSeason, runAdminAction, srOf, timeAgo } from '@/lib/admin.js';
+  import { runAdminAction, srOf, timeAgo } from '@/lib/admin.js';
   import { backend, SUBMISSION_STATUSES } from '@/lib/backend/index.js';
   import { dissolve, ms, slide } from '@/lib/motion.js';
   import { app, ladder } from '@/lib/state/app.svelte.js';
@@ -27,8 +28,8 @@
   /** Weight to give each submission if approved, by id. */
   let weights = $state({});
 
-  const fits = $derived(new Map(app.seasons.map((season) => [season.id, fitSeason(season)])));
-  const seasonName = (id) => app.seasons.find((season) => season.id === id)?.name ?? id;
+  const seasonOf = (id) => app.seasons.find((season) => season.id === id);
+  const seasonName = (id) => seasonOf(id)?.name ?? id;
 
   async function load() {
     loading = true;
@@ -50,7 +51,8 @@
   /** How a submission compares with the curve as it stands. */
   function assess(submission) {
     const sr = srOf(submission);
-    const model = fits.get(submission.seasonId)?.model;
+    const season = seasonOf(submission.seasonId);
+    const model = season ? app.fitOf(season).model : null;
     if (sr === null) return { tier: null, label: 'Unknown rank', tone: 'bad' };
     const tier = ladder.divisionAt(sr).tier;
     const division = ladder.divisionAt(sr).number;
@@ -125,9 +127,7 @@
           <span class="chip {verdict.tone}">{verdict.label}</span>
         </dl>
 
-        <a class="btn small proof" href={submission.proofUrl} target="_blank" rel="noopener noreferrer nofollow">
-          Open proof ↗
-        </a>
+        <ProofImage {submission} />
 
         <div class="decide">
           {#if status === 'pending'}
@@ -161,6 +161,7 @@
 <style>
   .filters {
     display: inline-flex;
+    justify-self: start;
     padding: 2px;
     border: 1px solid var(--line);
     background: rgb(5 10 26 / 0.55);

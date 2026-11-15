@@ -13,11 +13,20 @@ export const LOCAL_ADMIN_PASSWORD = 'admin';
 const LATENCY_MS = 250;
 const wait = () => new Promise((resolve) => setTimeout(resolve, LATENCY_MS));
 
+/** Images are kept as data: URLs, since localStorage only holds text. */
+const toDataUrl = (blob) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Could not read the image.'));
+    reader.readAsDataURL(blob);
+  });
+
 export function createLocalBackend(bundledSeasons) {
   function load() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (saved?.seasons) return saved;
+      if (saved?.seasons) return { proofs: {}, ...saved };
     } catch {
       // Corrupt or missing data: start again from the bundled seasons.
     }
@@ -27,12 +36,20 @@ export function createLocalBackend(bundledSeasons) {
         datapoints: season.datapoints.map((point) => ({ id: crypto.randomUUID(), ...point })),
       })),
       submissions: [],
+      /** Proof images by path. */
+      proofs: {},
       session: null,
     };
   }
 
   const db = load();
-  const save = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+  const save = () => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+    } catch {
+      throw new Error("This browser's local storage is full. Delete some submissions in the admin panel.");
+    }
+  };
 
   /** Wraps an operation with the fake delay, an optional admin check, and a save. */
   const operation =
@@ -40,7 +57,7 @@ export function createLocalBackend(bundledSeasons) {
     async (...args) => {
       await wait();
       if (admin && !db.session) throw new Error('Sign in as an admin first.');
-      const result = run(...args);
+      const result = await run(...args);
       save();
       // Hand back copies so callers cannot mutate the stored data.
       return result === undefined ? undefined : structuredClone(result);
@@ -63,14 +80,16 @@ export function createLocalBackend(bundledSeasons) {
 
     listSeasons: operation(() => db.seasons),
 
-    submitDatapoint: operation(({ seasonId, rank, betterThan, proofUrl }) => {
+    submitDatapoint: operation(async ({ seasonId, rank, betterThan, proof }) => {
       findSeason(seasonId);
+      const proofPath = `${crypto.randomUUID()}.${proof.extension}`;
+      db.proofs[proofPath] = await toDataUrl(proof.blob);
       db.submissions.push({
         id: crypto.randomUUID(),
         seasonId,
         rank,
         betterThan,
-        proofUrl,
+        proofPath,
         status: 'pending',
         createdAt: new Date().toISOString(),
         reviewedAt: null,
@@ -94,6 +113,15 @@ export function createLocalBackend(bundledSeasons) {
         db.submissions
           .filter((s) => s.status === status)
           .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+      { admin: true },
+    ),
+
+    getProofUrl: operation(
+      (submission) => {
+        const url = db.proofs[submission.proofPath];
+        if (!url) throw new Error('That proof image no longer exists.');
+        return url;
+      },
       { admin: true },
     ),
 
@@ -125,6 +153,7 @@ export function createLocalBackend(bundledSeasons) {
 
     deleteSubmission: operation(
       (id) => {
+        delete db.proofs[findSubmission(id).proofPath];
         db.submissions = db.submissions.filter((s) => s.id !== id);
       },
       { admin: true },
@@ -165,6 +194,9 @@ export function createLocalBackend(bundledSeasons) {
     deleteSeason: operation(
       (id) => {
         db.seasons = db.seasons.filter((s) => s.id !== id);
+        for (const submission of db.submissions.filter((s) => s.seasonId === id)) {
+          delete db.proofs[submission.proofPath];
+        }
         db.submissions = db.submissions.filter((s) => s.seasonId !== id);
       },
       { admin: true },

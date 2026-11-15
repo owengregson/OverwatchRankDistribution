@@ -4,6 +4,7 @@
   admin approves them.
 -->
 <script>
+  import ImageDrop from '@/components/ImageDrop.svelte';
   import RankBadge from '@/components/RankBadge.svelte';
   import RankPicker from '@/components/RankPicker.svelte';
   import { backend } from '@/lib/backend/index.js';
@@ -12,8 +13,8 @@
   import { app, ladder } from '@/lib/state/app.svelte.js';
 
   const STEPS = [
-    { title: 'Submit', text: 'Pick the rank, enter the percentage the game shows, and link a screenshot.' },
-    { title: 'Review', text: 'Every submission is checked against its proof before it counts.' },
+    { title: 'Submit', text: 'Pick the rank, enter the percentage the game shows, and attach a screenshot.' },
+    { title: 'Review', text: 'Every submission is checked against its screenshot before it counts.' },
     { title: 'Refit', text: 'Once approved, the curve is refitted with your datapoint included.' },
   ];
 
@@ -22,7 +23,8 @@
   let number = $state(3);
   /** Number inputs bind to a number, or nothing when empty. */
   let betterThan = $state(null);
-  let proofUrl = $state('');
+  /** The prepared screenshot (see ImageDrop), or null. */
+  let proof = $state(null);
 
   let errors = $state({});
   let sending = $state(false);
@@ -34,18 +36,10 @@
   const rankName = $derived(`${tier.name} ${number}`);
   const hasPercent = $derived(typeof betterThan === 'number' && betterThan > 0 && betterThan < 100);
 
-  function isWebLink(text) {
-    try {
-      return ['http:', 'https:'].includes(new URL(text).protocol);
-    } catch {
-      return false;
-    }
-  }
-
   function validate() {
     const found = {};
     if (!hasPercent) found.betterThan = 'Enter a percentage between 0 and 100.';
-    if (!isWebLink(proofUrl.trim())) found.proofUrl = 'Paste a full link starting with https://';
+    if (!proof) found.proof = 'Add a screenshot that shows the percentage.';
     errors = found;
     return Object.keys(found).length === 0;
   }
@@ -63,7 +57,7 @@
 
     sending = true;
     try {
-      await backend.submitDatapoint({ seasonId: season.id, rank: rankName, betterThan, proofUrl: proofUrl.trim() });
+      await backend.submitDatapoint({ seasonId: season.id, rank: rankName, betterThan, proof });
       sent = true;
     } catch (error) {
       failure = error.message;
@@ -74,7 +68,7 @@
 
   function another() {
     betterThan = null;
-    proofUrl = '';
+    proof = null;
     errors = {};
     sent = false;
   }
@@ -106,7 +100,7 @@
       </div>
     {:else}
       <p class="lede">
-        Know what share of players a rank beats this season? Send it in with a screenshot. Each datapoint makes the curve
+        Know what share of players a rank beats this season? Send it in with a screenshot as proof. Each datapoint makes the curve
         more accurate for everyone.
       </p>
 
@@ -149,23 +143,13 @@
           </span>
         </label>
 
-        <label class="field">
-          <span class="label">Proof link</span>
-          <input
-            class="input"
-            type="url"
-            inputmode="url"
-            placeholder="https://"
-            maxlength="500"
-            autocomplete="off"
-            bind:value={proofUrl}
-            oninput={() => (errors.proofUrl = '')}
-            aria-invalid={Boolean(errors.proofUrl)}
-          />
-          <span class="hint" class:error={errors.proofUrl}>
-            {errors.proofUrl || 'A link to a screenshot or clip that shows the percentage.'}
-          </span>
-        </label>
+        <div class="field">
+          <span class="label">Screenshot</span>
+          <ImageDrop bind:value={proof} invalid={Boolean(errors.proof)} onchange={() => (errors.proof = '')} />
+          {#if errors.proof}
+            <span class="hint error">{errors.proof}</span>
+          {/if}
+        </div>
 
         {#if failure}
           <p class="failure" role="alert" in:slide>Could not send that: {failure}</p>

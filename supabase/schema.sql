@@ -9,8 +9,8 @@
 -- Security model, enforced here by row-level security (RLS) and not by the
 -- website's code:
 --   * Anyone can read seasons and their datapoints (the site needs them).
---   * Anyone can add a submission, but only as "pending", and cannot read
---     submissions back.
+--   * Anyone can add a submission with a proof screenshot, but only as
+--     "pending", and cannot read submissions or screenshots back.
 --   * Only users listed in the `admins` table can read submissions or change
 --     anything.
 
@@ -30,7 +30,8 @@ create table if not exists public.submissions (
   season_id    text not null references public.seasons (id) on delete cascade,
   rank         text not null check (rank ~ '^[A-Za-z]{3,20} [1-5]$'),
   better_than  numeric not null check (better_than > 0 and better_than < 100),
-  proof_url    text not null check (proof_url ~* '^https?://' and char_length(proof_url) <= 500),
+  -- File name of the proof screenshot in the private "proofs" storage bucket.
+  proof_path   text not null check (proof_path ~ '^[0-9a-f-]{36}[.](webp|jpg)$'),
   status       text not null default 'pending' check (status in ('pending', 'approved', 'denied')),
   created_at   timestamptz not null default now(),
   reviewed_at  timestamptz
@@ -139,7 +140,7 @@ grant select on public.seasons, public.datapoints to anon, authenticated;
 grant insert, update, delete on public.seasons, public.datapoints to authenticated;
 
 -- Visitors may only set these four columns; status always starts as 'pending'.
-grant insert (season_id, rank, better_than, proof_url) on public.submissions to anon, authenticated;
+grant insert (season_id, rank, better_than, proof_path) on public.submissions to anon, authenticated;
 grant select, update, delete on public.submissions to authenticated;
 
 grant execute on function public.is_admin() to anon, authenticated;
@@ -167,6 +168,33 @@ create policy "Anyone can submit a datapoint" on public.submissions
   with check (status = 'pending' and reviewed_at is null);
 create policy "Admins review submissions" on public.submissions
   for all to authenticated using (public.is_admin()) with check (public.is_admin());
+
+-- ----------------------------------------------------- Proof screenshots
+--
+-- A private storage bucket: visitors can add an image to it, only admins can
+-- look at or delete one. Images are capped at 2 MB (the site shrinks them
+-- well below that before uploading).
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('proofs', 'proofs', false, 2097152, array['image/webp', 'image/jpeg'])
+on conflict (id) do update
+set public = excluded.public,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "Anyone can upload a proof" on storage.objects;
+drop policy if exists "Admins can view proofs"    on storage.objects;
+drop policy if exists "Admins can delete proofs"  on storage.objects;
+
+create policy "Anyone can upload a proof" on storage.objects
+  for insert to anon, authenticated
+  with check (bucket_id = 'proofs');
+create policy "Admins can view proofs" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'proofs' and public.is_admin());
+create policy "Admins can delete proofs" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'proofs' and public.is_admin());
 
 -- ------------------------------------------------------------- Seed data
 

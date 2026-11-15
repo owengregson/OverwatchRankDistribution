@@ -16,6 +16,7 @@ export function createStaticBackend(bundledSeasons) {
     signIn: unavailable,
     signOut: async () => {},
     listSubmissions: unavailable,
+    getProofUrl: unavailable,
     approveSubmission: unavailable,
     denySubmission: unavailable,
     deleteSubmission: unavailable,

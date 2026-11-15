@@ -8,6 +8,11 @@
  *
  * Column names in the database are snake_case; the app uses camelCase.
  */
+
+/** Private storage bucket holding proof screenshots (created by schema.sql). */
+const PROOF_BUCKET = 'proofs';
+/** How long an address for viewing a proof stays valid, in seconds. */
+const PROOF_URL_LIFETIME = 600;
 export function createSupabaseBackend({ url, anonKey }) {
   // The client library is loaded on first use, so the page can paint first.
   let clientPromise;
@@ -42,7 +47,7 @@ export function createSupabaseBackend({ url, anonKey }) {
     seasonId: row.season_id,
     rank: row.rank,
     betterThan: Number(row.better_than),
-    proofUrl: row.proof_url,
+    proofPath: row.proof_path,
     status: row.status,
     createdAt: row.created_at,
     reviewedAt: row.reviewed_at,
@@ -69,13 +74,21 @@ export function createSupabaseBackend({ url, anonKey }) {
       return rows.map(toSeason);
     },
 
-    async submitDatapoint({ seasonId, rank, betterThan, proofUrl }) {
+    async submitDatapoint({ seasonId, rank, betterThan, proof }) {
       const client = await getClient();
+
+      // The screenshot goes to private storage first; the submission then points at it.
+      const proofPath = `${crypto.randomUUID()}.${proof.extension}`;
+      const upload = await client.storage
+        .from(PROOF_BUCKET)
+        .upload(proofPath, proof.blob, { contentType: proof.blob.type, upsert: false });
+      if (upload.error) throw new Error(upload.error.message);
+
       // No .select(): visitors may add a submission but not read it back.
       unwrap(
         await client
           .from('submissions')
-          .insert({ season_id: seasonId, rank, better_than: betterThan, proof_url: proofUrl }),
+          .insert({ season_id: seasonId, rank, better_than: betterThan, proof_path: proofPath }),
       );
     },
 
@@ -108,6 +121,15 @@ export function createSupabaseBackend({ url, anonKey }) {
       return rows.map(toSubmission);
     },
 
+    async getProofUrl(submission) {
+      const client = await getClient();
+      const { data, error } = await client.storage
+        .from(PROOF_BUCKET)
+        .createSignedUrl(submission.proofPath, PROOF_URL_LIFETIME);
+      if (error) throw new Error(error.message);
+      return data.signedUrl;
+    },
+
     async approveSubmission(id, weight = 1) {
       const client = await getClient();
       // One database function, so the datapoint and the status change land together.
@@ -126,7 +148,9 @@ export function createSupabaseBackend({ url, anonKey }) {
 
     async deleteSubmission(id) {
       const client = await getClient();
+      const row = unwrap(await client.from('submissions').select('proof_path').eq('id', id).maybeSingle());
       unwrap(await client.from('submissions').delete().eq('id', id));
+      if (row?.proof_path) await client.storage.from(PROOF_BUCKET).remove([row.proof_path]);
     },
 
     async saveDatapoint(seasonId, datapoint) {
