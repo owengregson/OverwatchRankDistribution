@@ -22,7 +22,7 @@
     },
     {
       id: 'percentile',
-      label: 'Percentile',
+      label: 'Percent',
       placeholder: 'e.g. 90',
       suffix: '%',
       step: 0.1,
@@ -168,13 +168,16 @@
   .title {
     font-size: 26px;
     font-style: italic;
+    white-space: nowrap;
   }
 
   /* Segmented control with a thumb that slides to the selected tab. */
   .tabs {
     position: relative;
     display: grid;
-    grid-template-columns: repeat(var(--count), 1fr);
+    grid-template-columns: repeat(var(--count), minmax(0, 1fr));
+    width: 204px;
+    flex: none;
     padding: 2px;
     background: rgb(5 10 26 / 0.55);
     border: 1px solid var(--line);
@@ -191,7 +194,7 @@
 
   .tabs button {
     position: relative;
-    padding: 4px 10px;
+    padding: 4px 0;
     font-size: 11px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
