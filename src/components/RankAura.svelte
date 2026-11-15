@@ -57,7 +57,7 @@
       // The light sits a little above the middle of this wide, short icon.
       origin: { x: 0, y: -20 },
       halo: { reach: 680, peak: 54, breathes: true },
-      streak: { length: 1240, thickness: 5 },
+      streak: { length: 620, thickness: 5 },
       rays: [
         [-145, 250, 'bright'],
         [-129, 211, 'mid'],
@@ -86,7 +86,7 @@
     // Champion
     blaze: {
       halo: { reach: 720, peak: 62, breathes: true },
-      streak: { length: 1380, thickness: 7 },
+      streak: { length: 690, thickness: 7 },
       rays: [
         [-175, 266, 'faint'],
         [-151, 262, 'mid'],
