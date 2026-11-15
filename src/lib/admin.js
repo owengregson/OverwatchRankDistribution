@@ -1,4 +1,3 @@
-import { buildSeasonModel } from '@/lib/model/buildSeasonModel.js';
 import { app, ladder } from '@/lib/state/app.svelte.js';
 import { toasts } from '@/lib/state/toasts.svelte.js';
 
@@ -16,15 +15,6 @@ export async function runAdminAction(action, successMessage) {
   } catch (error) {
     toasts.error(error.message);
     return false;
-  }
-}
-
-/** A season's fitted model, or the reason it cannot be fitted. */
-export function fitSeason(season) {
-  try {
-    return { model: buildSeasonModel(season, ladder), error: null };
-  } catch (error) {
-    return { model: null, error };
   }
 }
 

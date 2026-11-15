@@ -4,14 +4,14 @@
 -->
 <script>
   import DatapointRow from '@/components/admin/DatapointRow.svelte';
-  import { fitSeason, srOf } from '@/lib/admin.js';
+  import { srOf } from '@/lib/admin.js';
   import { formatSr } from '@/lib/format.js';
   import { app, ladder } from '@/lib/state/app.svelte.js';
 
   let seasonId = $state(app.seasonId);
 
   const season = $derived(app.seasons.find((s) => s.id === seasonId) ?? app.season);
-  const fit = $derived(fitSeason(season));
+  const fit = $derived(app.fitOf(season));
   const points = $derived([...season.datapoints].sort((a, b) => (srOf(a) ?? 0) - (srOf(b) ?? 0)));
   const median = $derived(fit.model?.quantile(0.5));
 </script>

@@ -41,3 +41,16 @@ export function buildSeasonModel(season, ladder) {
 
   return { ...model, points, rmse };
 }
+
+/**
+ * Like `buildSeasonModel`, but reports a season that cannot be fitted
+ * (too few datapoints, contradictory ones…) instead of throwing.
+ * @returns {{ model: object, error: null } | { model: null, error: Error }}
+ */
+export function tryBuildSeasonModel(season, ladder) {
+  try {
+    return { model: buildSeasonModel(season, ladder), error: null };
+  } catch (error) {
+    return { model: null, error };
+  }
+}

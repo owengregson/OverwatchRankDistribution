@@ -4,7 +4,7 @@ import { SEASONS as BUNDLED_SEASONS, sortSeasons } from '@/data/seasons/index.js
 import { backend } from '@/lib/backend/index.js';
 import { createLadder } from '@/lib/ladder/createLadder.js';
 import { clamp } from '@/lib/math/util.js';
-import { buildSeasonModel } from '@/lib/model/buildSeasonModel.js';
+import { tryBuildSeasonModel } from '@/lib/model/buildSeasonModel.js';
 import { compareReadings, readAt } from '@/lib/model/reading.js';
 
 export const ladder = createLadder(LADDER_CONFIG);
@@ -85,17 +85,16 @@ class AppState {
   seasonId = $state(BUNDLED_SEASONS.at(-1)?.id);
   probe = new Probe();
 
-  season = $derived(this.seasons.find((season) => season.id === this.seasonId) ?? this.seasons.at(-1));
+  // Every season's curve is fitted from its datapoints. A season that
+  // cannot be fitted yields an error instead of breaking the page.
+  #fits = $derived(new Map(this.seasons.map((season) => [season.id, tryBuildSeasonModel(season, ladder)])));
 
-  // The model is always derived from the season's datapoints; a bad season
-  // file surfaces as `error` instead of breaking the page.
-  #fit = $derived.by(() => {
-    try {
-      return { model: buildSeasonModel(this.season, ladder), error: null };
-    } catch (error) {
-      return { model: null, error };
-    }
-  });
+  /** Seasons with enough data for a curve: the ones visitors can browse. */
+  viewableSeasons = $derived(this.seasons.filter((season) => this.#fits.get(season.id).model));
+
+  season = $derived(
+    this.seasons.find((season) => season.id === this.seasonId) ?? this.viewableSeasons.at(-1) ?? this.seasons.at(-1),
+  );
 
   reading = $derived(this.model ? readAt(this.model, ladder, this.probe.sr) : null);
   pinnedReading = $derived(
@@ -103,12 +102,17 @@ class AppState {
   );
   comparison = $derived(this.pinnedReading ? compareReadings(this.pinnedReading, this.reading) : null);
 
+  /** The fit for any season: { model, error }. */
+  fitOf(season) {
+    return this.#fits.get(season.id) ?? tryBuildSeasonModel(season, ladder);
+  }
+
   get model() {
-    return this.#fit.model;
+    return this.fitOf(this.season).model;
   }
 
   get error() {
-    return this.#fit.error;
+    return this.fitOf(this.season).error;
   }
 
   selectSeason(id) {
@@ -124,9 +128,10 @@ class AppState {
     try {
       const live = await backend.listSeasons();
       if (!live.length) return;
-      const hadSelection = live.some((season) => season.id === this.seasonId);
       this.seasons = sortSeasons(live);
-      if (!hadSelection) this.seasonId = this.seasons.at(-1).id;
+      // Keep the visitor's season if it still has a curve; otherwise show the newest that does.
+      const stillViewable = this.viewableSeasons.some((season) => season.id === this.seasonId);
+      if (!stillViewable) this.seasonId = (this.viewableSeasons.at(-1) ?? this.seasons.at(-1)).id;
     } catch (error) {
       console.warn('Could not load live seasons; showing the bundled copy.', error);
     }

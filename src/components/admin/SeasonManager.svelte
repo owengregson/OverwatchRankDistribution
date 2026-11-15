@@ -1,7 +1,7 @@
 <!-- Add, rename and delete seasons. A season's datapoints are managed on the Datapoints tab. -->
 <script>
   import ConfirmButton from '@/components/ConfirmButton.svelte';
-  import { fitSeason, runAdminAction } from '@/lib/admin.js';
+  import { runAdminAction } from '@/lib/admin.js';
   import { backend } from '@/lib/backend/index.js';
   import { app } from '@/lib/state/app.svelte.js';
   import { toasts } from '@/lib/state/toasts.svelte.js';
@@ -70,7 +70,7 @@
 
   {#each app.seasons as season (season.id)}
     {@const draft = draftFor(season)}
-    {@const fit = fitSeason(season)}
+    {@const fit = app.fitOf(season)}
     <div class="row" class:busy={busyId === season.id}>
       <input class="input compact" aria-label="Name" value={draft.name} oninput={(e) => change(season, 'name', e.currentTarget.value)} />
       <input class="input compact" type="number" aria-label="Year" value={draft.year} oninput={(e) => change(season, 'year', e.currentTarget.valueAsNumber)} />

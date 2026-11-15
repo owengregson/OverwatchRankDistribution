@@ -31,7 +31,7 @@
   </a>
 
   <nav class="seasons" aria-label="Season">
-    {#each app.seasons as season (season.id)}
+    {#each app.viewableSeasons as season (season.id)}
       <button
         type="button"
         class:current={onHome && season.id === app.seasonId}
