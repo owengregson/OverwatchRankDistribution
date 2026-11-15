@@ -12,7 +12,7 @@
  * backend that keeps its data in the browser.
  */
 export const SUPABASE = {
-  url: '',
+  url: 'https://xhcjvqursiqijyktvrpx.supabase.co',
   anonKey: '',
 };
 
