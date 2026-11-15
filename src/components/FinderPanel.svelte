@@ -1,6 +1,6 @@
 <!-- "Find my rank": send the cursor to an SR, a percentile, or a rank. -->
 <script>
-  import RankBadge from '@/components/RankBadge.svelte';
+  import RankPicker from '@/components/RankPicker.svelte';
   import { slide } from '@/lib/motion.js';
   import { app, ladder } from '@/lib/state/app.svelte.js';
   import { FINDER_INPUT_ID, FINDER_PANEL_ID } from '@/lib/ui.js';
@@ -94,37 +94,8 @@
   </header>
 
   {#if mode.id === 'rank'}
-    <div class="rank-picker" in:slide>
-      <div class="tiers" role="group" aria-label="Tier">
-        {#each ladder.tiers as tier (tier.id)}
-          <button
-            type="button"
-            class="tier"
-            class:selected={tier.id === current.tier.id}
-            style:--color={tier.color}
-            aria-label={tier.name}
-            aria-pressed={tier.id === current.tier.id}
-            title={tier.name}
-            onclick={() => goToRank(tier, current.number)}
-          >
-            <RankBadge {tier} size={26} align="center" animated={false} />
-          </button>
-        {/each}
-      </div>
-      <div class="divisions" role="group" aria-label="Division">
-        {#each current.tier.divisions as division (division.number)}
-          <button
-            type="button"
-            class="display division"
-            class:selected={division.number === current.number}
-            aria-pressed={division.number === current.number}
-            aria-label="Division {division.number}"
-            onclick={() => goToRank(current.tier, division.number)}
-          >
-            {division.number}
-          </button>
-        {/each}
-      </div>
+    <div in:slide>
+      <RankPicker tier={current.tier} number={current.number} onpick={goToRank} />
     </div>
   {:else}
     <form bind:this={form} onsubmit={submit} novalidate in:slide>
@@ -313,70 +284,5 @@
 
   .message.error {
     color: var(--orange-hot);
-  }
-
-  .rank-picker {
-    display: grid;
-    gap: 8px;
-  }
-
-  .tiers {
-    display: grid;
-    grid-template-columns: repeat(9, 1fr);
-    gap: 3px;
-  }
-
-  .tier {
-    display: grid;
-    place-items: center;
-    padding: 5px 0;
-    border: 1px solid transparent;
-    background: rgb(5 10 26 / 0.45);
-    opacity: 0.6;
-    transition:
-      opacity 200ms,
-      border-color 200ms,
-      background 200ms,
-      transform 240ms var(--ease-back);
-  }
-
-  .tier:hover {
-    opacity: 1;
-    transform: translateY(-2px);
-  }
-
-  .tier.selected {
-    opacity: 1;
-    border-color: var(--color);
-    background: color-mix(in srgb, var(--color) 16%, transparent);
-  }
-
-  .divisions {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 3px;
-  }
-
-  .division {
-    padding: 5px 0 3px;
-    border: 1px solid var(--line);
-    background: rgb(5 10 26 / 0.45);
-    font-size: 22px;
-    color: var(--ice-300);
-    transition:
-      color 200ms,
-      background 200ms,
-      border-color 200ms;
-  }
-
-  .division:hover {
-    color: var(--ice-50);
-    border-color: var(--line-strong);
-  }
-
-  .division.selected {
-    background: var(--tier);
-    border-color: var(--tier);
-    color: var(--navy-950);
   }
 </style>
