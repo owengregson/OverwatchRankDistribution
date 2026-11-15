@@ -69,8 +69,18 @@ export function loadSiteData() {
 
   const byShare = (list) => [...list].sort((a, b) => b.share - a.share);
 
+  // SR widths, from the ladder: Bronze (the first tier) is wider than the rest.
+  const span = (x) => x.maxSr - x.minSr;
+  const widths = {
+    tier: span(tiers[1]),
+    division: span(tiers[1].divisions[0]),
+    firstTier: span(tiers[0]),
+    firstDivision: span(tiers[0].divisions[0]),
+  };
+
   return {
     ladder,
+    widths,
     seasons,
     season,
     model,
