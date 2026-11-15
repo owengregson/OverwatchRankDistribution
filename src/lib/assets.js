@@ -3,7 +3,7 @@
  * Components ask for images by file name, so nothing else needs to know
  * where assets live or how they are hashed.
  */
-const modules = import.meta.glob('../../assets/images/*.png', {
+const modules = import.meta.glob('../../assets/images/*.{png,webp}', {
   eager: true,
   query: '?url',
   import: 'default',

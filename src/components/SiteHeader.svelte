@@ -1,18 +1,14 @@
 <!-- Light floating nav bar: brand tile, season tabs, model summary and call to action. -->
 <script>
   import ModelPopover from '@/components/ModelPopover.svelte';
+  import { imageUrl } from '@/lib/assets.js';
   import { app } from '@/lib/state/app.svelte.js';
   import { focusFinder } from '@/lib/ui.js';
 </script>
 
 <header class="nav">
   <div class="brand">
-    <!-- Site mark: a bell curve in a ring. -->
-    <svg class="mark" viewBox="0 0 40 40" aria-hidden="true">
-      <circle cx="20" cy="20" r="16.5" fill="none" stroke="currentColor" stroke-width="4" />
-      <path d="M4 12a17.5 17.5 0 0 1 32 0" fill="none" stroke="var(--orange)" stroke-width="4.4" />
-      <path d="M9 27c5 0 6-12 11-12s6 12 11 12" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" />
-    </svg>
+    <img class="mark" src={imageUrl('Overwatch_Icon.webp')} alt="Overwatch" width="36" height="36" draggable="false" />
     <span class="display wordmark">Rank Distribution</span>
   </div>
 
@@ -69,9 +65,9 @@
   }
 
   .mark {
-    width: 34px;
-    height: 34px;
-    color: var(--navy-700);
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
     transition: rotate 700ms var(--ease-back);
   }
 
