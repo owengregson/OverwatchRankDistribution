@@ -13,7 +13,7 @@
  */
 export const SUPABASE = {
   url: 'https://xhcjvqursiqijyktvrpx.supabase.co',
-  anonKey: '',
+  anonKey: 'sb_publishable_Wanimc61lpHQS4dm_2MkTw_Fi5ZIfTn',
 };
 
 export const AUTHOR = {

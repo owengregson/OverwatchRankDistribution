@@ -4,3 +4,6 @@ dist
 *.log
 .DS_Store
 .claude/worktrees
+
+# Local notes that must never be committed (e.g. a generated admin login)
+*.local.txt
