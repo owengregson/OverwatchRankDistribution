@@ -1,4 +1,8 @@
-<!-- Pin a point, then read the gap between it and the cursor. -->
+<!--
+  Compare two ranks. The first pin fixes one end and the gap is read to
+  the cursor as it moves; the second pin fixes the other end, which leaves
+  the comparison on screen while the cursor goes back to exploring.
+-->
 <script>
   import RankBadge from '@/components/RankBadge.svelte';
   import { formatPercent, formatSr } from '@/lib/format.js';
@@ -7,12 +11,13 @@
 
   const probe = app.probe;
   const pinned = $derived(app.pinnedReading);
-  const reading = $derived(app.reading);
+  /** The second pin, once it is placed. */
+  const locked = $derived(app.lockedReading);
   const comparison = $derived(app.comparison);
-  /** +1 when the cursor is above the pin, -1 below, 0 on it. */
-  const direction = $derived(pinned ? Math.sign(reading.sr - pinned.sr) : 0);
+  /** +1 when the other end is above the first pin, -1 below, 0 on it. */
+  const direction = $derived(pinned ? Math.sign(app.comparedReading.sr - pinned.sr) : 0);
 
-  /** "+7 divs", "−1 div", "same div": how far the cursor's rank is from the pin, signed like the SR gap. */
+  /** "+7 divs", "−1 div", "same div": how far the other end's rank is from the first pin, signed like the SR gap. */
   const sign = $derived(direction < 0 ? '−' : direction > 0 ? '+' : '');
   const ladderGap = $derived.by(() => {
     const count = comparison?.divisionGap ?? 0;
@@ -23,26 +28,41 @@
 <section class="panel compare" class:pinned>
   <header>
     <h2 class="display title">Compare</h2>
-    {#if pinned}
-      <button type="button" class="action" onclick={() => probe.unpin()}>Clear pin</button>
-    {:else}
-      <button type="button" class="action primary" onclick={() => probe.pin()}>Pin this rank</button>
-    {/if}
+    <div class="actions">
+      {#if !locked}
+        <button type="button" class="action primary" onclick={() => probe.pin()}>
+          {pinned ? 'Pin second rank' : 'Pin this rank'}
+        </button>
+      {/if}
+      {#if pinned}
+        <button type="button" class="action" onclick={() => probe.unpin()}>{locked ? 'Clear pins' : 'Clear'}</button>
+      {/if}
+    </div>
   </header>
 
   {#if comparison}
-    <div class="body" in:slide>
+    <div class="body" class:locked in:slide>
       <div class="side">
-        <RankBadge tier={pinned.tier} division={pinned.division.number} size={44} />
+        <RankBadge tier={pinned.tier} division={pinned.division.number} size={locked ? 34 : 44} />
         <div>
           <div class="display rank">{pinned.division.name}</div>
-          <div class="numeric meta">{formatSr(pinned.sr)} SR · pinned</div>
+          <div class="numeric meta">{formatSr(pinned.sr)} SR{locked ? '' : ' · pinned'}</div>
         </div>
       </div>
 
       <div class="arrow" class:down={direction < 0} class:flat={direction === 0} aria-hidden="true">
         <span></span><span></span><span></span>
       </div>
+
+      {#if locked}
+        <div class="side" in:slide>
+          <RankBadge tier={locked.tier} division={locked.division.number} size={34} />
+          <div>
+            <div class="display rank">{locked.division.name}</div>
+            <div class="numeric meta">{formatSr(locked.sr)} SR</div>
+          </div>
+        </div>
+      {/if}
 
       <dl class="gap">
         <div>
@@ -59,7 +79,8 @@
     </div>
   {:else}
     <p class="hint" in:slide>
-      Click the curve to pin a rank, then move to measure the SR and player gap to any other rank.
+      Click the curve to pin a rank, move to measure the SR and player gap to any other rank, then click again
+      to lock the comparison in.
     </p>
   {/if}
 </section>
@@ -83,8 +104,14 @@
     font-style: italic;
   }
 
+  .actions {
+    display: flex;
+    gap: 6px;
+  }
+
   .action {
     padding: 4px 10px;
+    white-space: nowrap;
     border: 1px solid var(--line-strong);
     font-size: 11px;
     letter-spacing: 0.08em;
@@ -142,6 +169,33 @@
     font-size: 10px;
     color: var(--ice-400);
     white-space: nowrap;
+  }
+
+  /* With both ranks pinned they share the first row, drawn a little smaller, and the gap takes the second. */
+  .locked .side {
+    gap: 6px;
+  }
+
+  .locked .rank {
+    font-size: 17px;
+  }
+
+  .locked .gap {
+    flex-basis: 100%;
+    justify-content: flex-start;
+    gap: 22px;
+  }
+
+  /* On its own row each figure sits beside its label, which keeps the panel short. */
+  .locked .gap > div {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+  }
+
+  .locked .gap dd {
+    margin: 0;
+    font-size: 19px;
   }
 
   /* Chevrons pulse in sequence; they flip to point left when the cursor is below the pin. */

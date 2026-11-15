@@ -1,6 +1,6 @@
-# Rank Distribution
+# Overwatch Rank Distribution
 
-An interactive competitive rank distribution for Overwatch. Move across the curve to see which rank sits at every percentile, look a rank up by SR, percentile or name, and pin one rank to compare it with another.
+An interactive competitive rank distribution for Overwatch. Move across the curve to see which rank sits at every percentile, look a rank up by SR, percentile or name, and pin two ranks to compare them.
 
 The curve is never drawn by hand. Each season has a set of small datapoints ("a Master 3 player is better than 97% of players") and the curve is fitted to whatever datapoints that season has. Visitors can submit new datapoints with a screenshot; they count once an admin approves them.
 
@@ -85,11 +85,13 @@ src/
   lib/model/               datapoints → fitted curve → readings
   lib/ladder/              tiers and divisions, rank-name parsing
   lib/backend/             storage: Supabase, local stand-in, read-only
-  lib/state/               app state (season, model, cursor)
-  lib/chart/               chart geometry
+  lib/state/               app state (season, model, cursor, pins), the opening sequence
+  lib/chart/               chart geometry, the curve's colours and how it is painted
+  lib/loader.js            the loading screen: loads assets, shows progress, opens the page
   components/              UI pieces; chart/ holds the chart's layers
   pages/                   the curve, the submit form, the admin panel
   styles/tokens.css        colours, fonts, spacing
+  styles/loader.css        the loading screen
 tests/                     model and ladder tests
 ```
 
@@ -99,4 +101,7 @@ Common changes:
 - **Rank icons**: replace or add an image in `assets/images`, then run `node scripts/measure-icons.mjs`. The icon files differ in shape and scale, so the site measures how much each one actually covers and scales them to look the same size (`src/lib/ladder/iconSizing.js`).
 - **Rank light effects** (glow, streak, rays, sparkles): the `EFFECTS` table and the `RAY` and `STREAK_OPACITY` settings at the top of `src/components/RankAura.svelte`; which tier uses which is `glow` in the ladder.
 - **Cursors**: the site draws its own cursor (`src/components/CustomCursor.svelte`), because Chrome swaps any image cursor for the system one wherever it would cross the edge of the page. Size is `CURSOR_SCALE` in `src/lib/cursor/cursors.js`; which elements get the arrow, finger or text bar is `src/styles/cursors.css`. After replacing a `.cur`, run `node scripts/extract-cursors.mjs`.
+- **The curve's look**: the curve is painted on a canvas by `src/lib/chart/curveRenderer.js`. Everything worth tuning (how bright the fill, glow and core line are, the hatching, the light around the cursor, the passing sheen) is the `LOOK` table at the top of that file. Its colours come from the ladder: `src/lib/chart/tierRamp.js` blends each tier's colour into its neighbours.
+- **Loading screen and opening**: the markup is in `index.html` so it shows before any script runs, the styles are `src/styles/loader.css`, and `src/lib/loader.js` loads the fonts, images and season data, fills the bar and opens the page (timings are in `TIMING` there). The page's own entrance waits for it: see `src/lib/state/intro.svelte.js`. The curve's part of the intro is `INTRO` in `src/components/DistributionChart.svelte`.
+- **Logo and favicon**: `assets/images/overwatch_logo_dark_fill.svg` (for light backgrounds, used in the header), `overwatch_logo_light_fill.svg` (for dark backgrounds; a copy is inlined in `index.html` for the loading screen) and `favicon.png`.
 - **Theme**: `src/styles/tokens.css`.

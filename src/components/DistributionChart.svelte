@@ -7,10 +7,9 @@
   probe); nothing here knows about a particular season.
 -->
 <script>
-  import { onMount } from 'svelte';
-  import { cubicInOut } from 'svelte/easing';
+  import { untrack } from 'svelte';
+  import { cubicInOut, cubicOut } from 'svelte/easing';
   import { Tween } from 'svelte/motion';
-  import ChartDefs from '@/components/chart/ChartDefs.svelte';
   import ChartTooltip from '@/components/chart/ChartTooltip.svelte';
   import CompareLayer from '@/components/chart/CompareLayer.svelte';
   import CursorLayer from '@/components/chart/CursorLayer.svelte';
@@ -21,29 +20,31 @@
   import TierBands from '@/components/chart/TierBands.svelte';
   import TierStrip from '@/components/chart/TierStrip.svelte';
   import { setChart } from '@/lib/chart/context.js';
-  import { areaPath, createScales, interpolate, linePath, sampleSrs } from '@/lib/chart/geometry.js';
+  import { createScales, interpolate, sampleSrs } from '@/lib/chart/geometry.js';
+  import { createTierRamp } from '@/lib/chart/tierRamp.js';
   import { formatPercent, formatSr } from '@/lib/format.js';
-  import { ms } from '@/lib/motion.js';
+  import { ms, settle } from '@/lib/motion.js';
   import { app, ladder } from '@/lib/state/app.svelte.js';
+  import { intro } from '@/lib/state/intro.svelte.js';
 
   const PADDING = { top: 62, right: 18, bottom: 30, left: 18 };
-  /** SR between curve samples. 10 SR is about 2px on a wide screen: visually smooth. */
+  /** SR between curve samples. 10 SR is about 2px on a wide screen; the curve is smoothed between them. */
   const SAMPLE_STEP = 10;
+  /** The intro, in ms: once the page opens the curve waits for its panel to arrive, then draws itself. */
+  const INTRO = { wait: 520, draw: 1300 };
+  /** How quickly the cursor arrives (ms) the first time the visitor picks a point. */
+  const CURSOR_ARRIVAL = 320;
   /** Empty space kept above the curve's peak, as a fraction of the peak. */
   const HEADROOM = 1.14;
   /** A press that moves less than this many pixels is a click, not a drag. */
   const CLICK_SLOP = 5;
-  /** How close (px) a click must be to the pin to count as clicking it. */
+  /** How close (px) a click must be to the first pin to count as clicking it. */
   const SNAP_RADIUS = 9;
   const FINE_STEP = 10;
 
-  const uid = $props.id();
-  const ids = Object.fromEntries(
-    ['tiers', 'fade', 'fadeMask', 'revealed', 'behind', 'ahead', 'cursor'].map((name) => [name, `${uid}-${name}`]),
-  );
-
   const probe = app.probe;
   const srs = sampleSrs(ladder.maxSr, SAMPLE_STEP);
+  const ramp = createTierRamp(ladder);
 
   let plot = $state();
   let width = $state(0);
@@ -59,17 +60,38 @@
   );
   const densityAt = (sr) => interpolate(srs, densities.current, sr);
   const cursorX = $derived(scales.x(probe.position));
+  /** The curve's samples in pixels. */
+  const points = $derived({ xs: srs.map(scales.x), ys: densities.current.map(scales.y) });
 
-  // Intro: the curve wipes in from the left while the cursor rides out to the median.
-  const reveal = new Tween(0, { duration: ms(1500), easing: cubicInOut });
-  onMount(() => {
-    reveal.target = 1;
-    probe.jump(ladder.minSr);
-    probe.glide(app.model.quantile(0.5));
+  // Intro: once the page opens (see lib/state/intro.svelte.js) the curve
+  // draws itself from the left, fully lit, and that is all. The cursor,
+  // its card and the tier highlight only arrive when the visitor picks a
+  // point (`probe.engaged`), and never before the curve has finished drawing.
+  const reveal = new Tween(0, { duration: ms(INTRO.draw), easing: settle });
+  let drawn = $state(false);
+
+  async function playIntro() {
+    // The side panels need somewhere to start: the median player.
+    probe.jump(app.model.quantile(0.5));
+    await reveal.set(1, { delay: ms(INTRO.wait) });
+    drawn = true;
+  }
+
+  $effect(() => {
+    if (intro.opened) untrack(playIntro);
   });
 
+  /** How present the cursor is: 0 while the chart shows the curve alone, 1 once a point is picked. */
+  const presence = new Tween(0, { duration: ms(CURSOR_ARRIVAL), easing: cubicOut });
+  $effect(() => {
+    if (drawn && probe.engaged) presence.target = 1;
+  });
+
+  /** Lit up to here, dim beyond: the right-hand edge while there is no cursor, then the cursor. */
+  const splitX = $derived(cursorX + (scales.width - cursorX) * (1 - presence.current));
+
   setChart({
-    ids,
+    ramp,
     densityAt,
     get scales() {
       return scales;
@@ -77,17 +99,20 @@
     get cursorX() {
       return cursorX;
     },
+    get splitX() {
+      return splitX;
+    },
     get reveal() {
       return reveal.current;
+    },
+    get presence() {
+      return presence.current;
     },
     get peak() {
       return peak;
     },
-    get curve() {
-      return linePath(srs, densities.current, scales);
-    },
-    get area() {
-      return areaPath(srs, densities.current, scales);
+    get points() {
+      return points;
     },
   });
 
@@ -124,10 +149,20 @@
     if (clicked) togglePin(Math.round(srFromEvent(event)));
   }
 
-  /** Clicking pins the point; clicking the pin again removes it. */
+  /**
+   * The first click pins where the comparison starts, the second where it
+   * ends; after that the pointer is free again. Clicking the first pin
+   * before placing the second takes it back.
+   */
   function togglePin(sr) {
-    if (probe.pinnedSr !== null && Math.abs(probe.pinnedSr - sr) <= snapSr) probe.unpin();
+    if (probe.comparing === 'measuring' && Math.abs(probe.pinnedSr - sr) <= snapSr) probe.unpin();
     else probe.pin(sr);
+  }
+
+  /** A right click clears the pins. (The browser's own menu is already turned off, see lib/guard.js.) */
+  function oncontextmenu(event) {
+    event.preventDefault();
+    probe.unpin();
   }
 
   // ---------- Keyboard ----------
@@ -177,14 +212,17 @@
     {onpointermove}
     {onpointerup}
     onpointercancel={() => (press = null)}
+    {oncontextmenu}
     {onkeydown}
   >
     {#if width > 0 && height > 0}
+      <!-- Back to front: the grid, the curve on its canvas, then everything that sits over the curve. -->
       <svg {width} {height} viewBox="0 0 {width} {height}" aria-hidden="true">
-        <ChartDefs />
         <TierBands />
         <GridLines />
-        <CurveLayer />
+      </svg>
+      <CurveLayer />
+      <svg {width} {height} viewBox="0 0 {width} {height}" aria-hidden="true">
         <PercentileRuler />
         <SrAxis />
         <CompareLayer />

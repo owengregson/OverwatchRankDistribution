@@ -27,8 +27,8 @@
           <li class="touch">Drag to explore</li>
           <li class="pointer"><kbd>←</kbd><kbd>→</kbd> Division</li>
           <li class="pointer"><kbd>Shift</kbd> Fine</li>
-          <li class="pointer"><kbd>Click</kbd> Pin</li>
-          <li class="pointer"><kbd>Esc</kbd> Clear</li>
+          <li class="pointer"><kbd>Click</kbd> Pin · again to lock</li>
+          <li class="pointer"><kbd>Esc</kbd><kbd>Right click</kbd> Clear</li>
         </ul>
       </header>
 

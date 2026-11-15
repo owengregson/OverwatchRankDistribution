@@ -1,4 +1,4 @@
-<!-- Floating card beside the cursor: the rank badge and headline numbers. -->
+<!-- Floating card beside the cursor: the rank badge and headline numbers. Hidden until the visitor first picks a point. -->
 <script>
   import RankBadge from '@/components/RankBadge.svelte';
   import { getChart } from '@/lib/chart/context.js';
@@ -28,6 +28,7 @@
   style:left="{chart.cursorX}px"
   style:top="{top}px"
   style:--offset="{OFFSET}px"
+  style:--presence={chart.presence}
   aria-hidden="true"
 >
   <div class="card" bind:clientWidth={cardWidth} bind:clientHeight={cardHeight}>
@@ -62,6 +63,9 @@
     border-left: 3px solid var(--tier);
     clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
     white-space: nowrap;
+    /* Arrives with the cursor (--presence: 0 → 1). */
+    opacity: var(--presence);
+    scale: calc(0.9 + 0.1 * var(--presence));
   }
 
   .name {

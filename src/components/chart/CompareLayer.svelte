@@ -1,4 +1,7 @@
-<!-- The pinned point and the bracket measuring the gap from it to the cursor. -->
+<!--
+  The comparison on the chart: the first pin and a bracket measuring the
+  gap from it to the cursor, or to the second pin once that is placed.
+-->
 <script>
   import { getChart } from '@/lib/chart/context.js';
   import { formatPercent, formatSr } from '@/lib/format.js';
@@ -12,9 +15,12 @@
   const chart = getChart();
   const s = $derived(chart.scales);
   const pinnedSr = $derived(app.probe.pinnedSr);
+  const lockedSr = $derived(app.probe.lockedSr);
   const pinX = $derived(s.x(pinnedSr ?? 0));
-  const from = $derived(Math.min(pinX, chart.cursorX));
-  const to = $derived(Math.max(pinX, chart.cursorX));
+  /** The other end: the second pin, or the cursor until there is one. */
+  const endX = $derived(lockedSr === null ? chart.cursorX : s.x(lockedSr));
+  const from = $derived(Math.min(pinX, endX));
+  const to = $derived(Math.max(pinX, endX));
   const labelX = $derived(
     clamp((from + to) / 2, s.left + LABEL_HALF_WIDTH, Math.max(s.left + LABEL_HALF_WIDTH, s.right - LABEL_HALF_WIDTH)),
   );
@@ -31,15 +37,24 @@
     </text>
 
     {#key pinnedSr}
-      <g class="pin" style:transform="translateX({pinX}px)">
-        <line x1="0" x2="0" y1={BRACKET_Y} y2={s.bottom} />
-        <rect class="head" x="-5" y={BRACKET_Y - 5} width="10" height="10" />
-        <circle class="ping" cx="0" cy={s.y(chart.densityAt(pinnedSr))} r="5" />
-        <circle class="dot" cx="0" cy={s.y(chart.densityAt(pinnedSr))} r="4" />
-      </g>
+      {@render pin(pinnedSr)}
     {/key}
+    {#if lockedSr !== null}
+      {#key lockedSr}
+        {@render pin(lockedSr)}
+      {/key}
+    {/if}
   </g>
 {/if}
+
+{#snippet pin(sr)}
+  <g class="pin" style:transform="translateX({s.x(sr)}px)">
+    <line x1="0" x2="0" y1={BRACKET_Y} y2={s.bottom} />
+    <rect class="head" x="-5" y={BRACKET_Y - 5} width="10" height="10" />
+    <circle class="ping" cx="0" cy={s.y(chart.densityAt(sr))} r="5" />
+    <circle class="dot" cx="0" cy={s.y(chart.densityAt(sr))} r="4" />
+  </g>
+{/snippet}
 
 <style>
   .span {

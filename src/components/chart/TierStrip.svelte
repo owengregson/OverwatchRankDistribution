@@ -9,7 +9,8 @@
   let { padding, plotWidth } = $props();
 
   const shares = $derived(tierShares(app.model, ladder));
-  const activeId = $derived(app.reading.tier.id);
+  // No tier is marked until the visitor has picked a point.
+  const activeId = $derived(app.probe.engaged ? app.reading.tier.id : null);
 
   // A standard tier is a tenth of the axis; keep the widest icon inside its column.
   const columnWidth = $derived(((plotWidth - padding.left - padding.right) * 500) / ladder.maxSr);

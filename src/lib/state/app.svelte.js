@@ -30,8 +30,20 @@ class Probe {
 
   /** Where the probe is heading (whole SR). */
   target = $state(0);
-  /** A second, fixed point to compare against, or null. */
+  /**
+   * Whether the visitor has picked a point yet (by hovering the chart, the
+   * keyboard, the finder, a tier icon or a pin). Until then the chart shows
+   * the curve alone, with no cursor on it.
+   */
+  engaged = $state(false);
+  /**
+   * The comparison, set with two pins. The first fixes where it starts
+   * (`pinnedSr`) and the gap is measured from there to the probe as it
+   * moves. The second fixes where it ends (`lockedSr`): the comparison then
+   * stays put and the probe is free to roam again.
+   */
   pinnedSr = $state(null);
+  lockedSr = $state(null);
 
   /** Animated position, for drawing. */
   get position() {
@@ -52,11 +64,13 @@ class Probe {
 
   /** Track a pointer closely. */
   follow(sr) {
+    this.engaged = true;
     this.#move(sr, FOLLOW);
   }
 
   /** Travel to a point with a visible sweep. */
   glide(sr) {
+    this.engaged = true;
     this.#move(sr, GLIDE);
   }
 
@@ -66,20 +80,39 @@ class Probe {
    * a slow settle would leave the readout lagging behind the choice.
    */
   goTo(sr) {
+    this.engaged = true;
     this.#move(sr, Math.abs(sr - this.position) <= HOP_DISTANCE ? FOLLOW : GLIDE);
   }
 
-  /** Move without animating. */
+  /** Move without animating, and without counting as the visitor picking a point. */
   jump(sr) {
     this.#move(sr, FOLLOW, true);
   }
 
+  /** 'idle' with no pins, 'measuring' from the first pin, 'locked' between two. */
+  get comparing() {
+    if (this.pinnedSr === null) return 'idle';
+    return this.lockedSr === null ? 'measuring' : 'locked';
+  }
+
+  /**
+   * Drop the next pin: the start of a comparison, then its end. A pin
+   * dropped on a locked comparison starts a new one.
+   */
   pin(sr = this.target) {
-    this.pinnedSr = clamp(Math.round(sr), ladder.minSr, ladder.maxSr);
+    const at = clamp(Math.round(sr), ladder.minSr, ladder.maxSr);
+    this.engaged = true;
+    if (this.comparing === 'measuring') {
+      this.lockedSr = at;
+    } else {
+      this.pinnedSr = at;
+      this.lockedSr = null;
+    }
   }
 
   unpin() {
     this.pinnedSr = null;
+    this.lockedSr = null;
   }
 }
 
@@ -105,7 +138,13 @@ class AppState {
   pinnedReading = $derived(
     this.model && this.probe.pinnedSr !== null ? readAt(this.model, ladder, this.probe.pinnedSr) : null,
   );
-  comparison = $derived(this.pinnedReading ? compareReadings(this.pinnedReading, this.reading) : null);
+  /** The far end of the comparison once it is locked. */
+  lockedReading = $derived(
+    this.model && this.probe.lockedSr !== null ? readAt(this.model, ladder, this.probe.lockedSr) : null,
+  );
+  /** What the first pin is compared with: the second pin, or the probe until there is one. */
+  comparedReading = $derived(this.lockedReading ?? this.reading);
+  comparison = $derived(this.pinnedReading ? compareReadings(this.pinnedReading, this.comparedReading) : null);
 
   /** The fit for any season: { model, error }. */
   fitOf(season) {

@@ -84,12 +84,21 @@ img {
 
 /*
  * Page titles lean, as they do in game. The oblique cut of Big Noodle only
- * leans about 3 degrees, so the rest of the slant is applied here.
+ * leans about 3 degrees, so the rest of the slant (--slant) is applied here.
+ *
+ * Leaning text about its foot carries the top of each letter to the right,
+ * by tan(slant) for every unit of height, which would leave a gap between
+ * the title and the left edge it is meant to sit on. The title is moved
+ * back by exactly that drift at the top of its capitals (1cap, which is
+ * all Big Noodle has), so the shift follows the angle and the font size.
  */
 .slanted {
+  --slant: 9deg;
   font-style: italic;
-  transform: skewX(-9deg);
   transform-origin: 0 100%;
+  /* For browsers without tan() or the cap unit: lean without the shift. */
+  transform: skewX(-9deg);
+  transform: translateX(calc(tan(var(--slant)) * -1cap)) skewX(calc(var(--slant) * -1));
 }
 
 .eyebrow {
@@ -132,6 +141,17 @@ img {
   clip-path: var(--shape);
   background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom));
   backdrop-filter: blur(10px);
+}
+
+/*
+ * While the loading screen is up (the `loading` class on <html>, see
+ * lib/loader.js) every animation in the app is held at its first frame, so
+ * the entrances below start when the screen opens rather than behind it.
+ */
+html.loading .app *,
+html.loading .app *::before,
+html.loading .app *::after {
+  animation-play-state: paused !important;
 }
 
 /* Staggered entrance: set --i on the element to order it. */

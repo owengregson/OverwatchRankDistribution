@@ -37,25 +37,6 @@ export function sampleSrs(maxSr, step) {
   return srs;
 }
 
-const px = (n) => Math.round(n * 100) / 100;
-
-/** SVG path along the curve. Samples are dense enough to read as smooth. */
-export function linePath(srs, densities, scales) {
-  let d = '';
-  for (let i = 0; i < srs.length; i++) {
-    d += `${i ? 'L' : 'M'}${px(scales.x(srs[i]))},${px(scales.y(densities[i]))}`;
-  }
-  return d;
-}
-
-/** The curve closed down to the baseline, for filling. */
-export function areaPath(srs, densities, scales) {
-  const first = px(scales.x(srs[0]));
-  const last = px(scales.x(srs[srs.length - 1]));
-  const base = px(scales.bottom);
-  return `${linePath(srs, densities, scales)}L${last},${base}L${first},${base}Z`;
-}
-
 /** Linear interpolation of evenly sampled values at an arbitrary SR. */
 export function interpolate(srs, values, sr) {
   const step = srs[1] - srs[0];

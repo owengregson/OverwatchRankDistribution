@@ -1,0 +1,200 @@
+/*
+ * The loading screen (markup in index.html, driven by src/lib/loader.js):
+ * the logo and a progress bar on the site's navy, covering the page.
+ *
+ * States, as classes on .loader, in the order they are added:
+ *   has-type     the fonts have arrived, so the text can be shown
+ *   is-done      everything is loaded: the full bar flashes
+ *   is-opening   the screen dissolves, the logo drifting towards the
+ *                viewer as it goes, while the page arrives underneath
+ *
+ * --progress (0 to 1) is set from the script as assets arrive.
+ */
+.loader {
+  --progress: 0;
+
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(620px 620px at 50% 46%, rgb(52 84 190 / 0.34), rgb(52 84 190 / 0.1) 50%, transparent 72%),
+    linear-gradient(180deg, #0d1738, #080e24);
+  color: var(--ice-100);
+  font-family: var(--font-body);
+  font-weight: var(--font-body-weight);
+  user-select: none;
+  -webkit-user-select: none;
+  /* Matches TIMING.dissolve in src/lib/loader.js. */
+  transition: opacity 800ms var(--ease-in-out);
+}
+
+/* Nothing behind the loading screen should scroll. */
+html.loading {
+  overflow: hidden;
+}
+
+.loader.is-opening {
+  opacity: 0;
+  /* The page underneath can be used as soon as it starts to show. */
+  pointer-events: none;
+}
+
+/* ---------- Logo and progress ---------- */
+
+.loader__stage {
+  display: grid;
+  justify-items: center;
+  transition:
+    scale 800ms var(--ease-in-out),
+    filter 800ms var(--ease-in-out);
+}
+
+.is-opening .loader__stage {
+  scale: 1.14;
+  filter: blur(5px);
+}
+
+.loader__mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 120px;
+  aspect-ratio: 1;
+}
+
+.loader__logo {
+  width: 74px;
+  filter: drop-shadow(0 0 22px rgb(240 100 20 / 0.45));
+  animation: loader-breathe 2.6s ease-in-out infinite;
+}
+
+.loader__orbit {
+  position: absolute;
+  inset: 0;
+  fill: none;
+  animation: loader-spin 1.5s linear infinite;
+}
+
+.loader__orbit-track {
+  stroke: rgb(160 185 255 / 0.12);
+  stroke-width: 1;
+}
+
+/* pathLength is 100 in the markup: a 22-unit arc, the rest a gap. */
+.loader__orbit-arc {
+  stroke: var(--orange-hot);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 22 78;
+}
+
+/* The bar leans like the rest of the site's angular furniture. */
+.loader__bar {
+  position: relative;
+  width: min(280px, 64vw);
+  height: 4px;
+  margin-top: 30px;
+  overflow: hidden;
+  background: rgb(160 185 255 / 0.14);
+  transform: skewX(-24deg);
+  transition: box-shadow 120ms;
+}
+
+.loader__fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 50%;
+  scale: var(--progress) 1;
+  background: linear-gradient(90deg, var(--orange), var(--orange-hot));
+}
+
+/*
+ * The white the full bar flashes to. It fades in over the orange rather
+ * than replacing it: a gradient cannot fade into a colour, so swapping the
+ * background left the bar empty for a frame.
+ */
+.loader__fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  /* Matches TIMING.flash in src/lib/loader.js. */
+  transition: opacity 120ms;
+}
+
+/* A glint that keeps crossing the bar, so it reads as alive even before the first asset lands. */
+.loader__bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
+  translate: -100% 0;
+  animation: loader-glint 1.5s var(--ease-in-out) infinite;
+}
+
+.is-done .loader__fill::after {
+  opacity: 1;
+}
+
+.is-done .loader__bar {
+  box-shadow: 0 0 18px 1px rgb(255 131 54 / 0.8);
+}
+
+/* Text waits for its font, so it never shows in a fallback face and then jumps. */
+.loader__status {
+  display: flex;
+  justify-content: space-between;
+  width: min(280px, 64vw);
+  margin: 10px 0 0;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ice-400);
+  opacity: 0;
+  transition: opacity 500ms var(--ease-out);
+}
+
+.has-type .loader__status {
+  opacity: 1;
+}
+
+.loader__percent {
+  font-variant-numeric: tabular-nums;
+  color: var(--ice-200);
+}
+
+@keyframes loader-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+@keyframes loader-breathe {
+  50% {
+    filter: drop-shadow(0 0 30px rgb(240 100 20 / 0.7));
+    scale: 1.03;
+  }
+}
+
+@keyframes loader-glint {
+  to {
+    translate: 100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loader__orbit,
+  .loader__logo,
+  .loader__bar::after {
+    animation: none;
+  }
+
+  .is-opening .loader__stage {
+    scale: 1;
+    filter: none;
+  }
+}

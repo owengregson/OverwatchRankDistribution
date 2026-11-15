@@ -25,8 +25,16 @@
 </script>
 
 <header class="nav">
-  <a class="brand" href={href('')} aria-label="Rank Distribution home">
-    <img class="mark" src={imageUrl('Overwatch_Icon.webp')} alt="Overwatch" width="36" height="36" draggable="false" />
+  <a class="brand" href={href('')} aria-label="Overwatch Rank Distribution home">
+    <!-- The dark-fill logo, for the white tile it sits on. -->
+    <img
+      class="mark"
+      src={imageUrl('overwatch_logo_dark_fill.svg')}
+      alt="Overwatch"
+      width="36"
+      height="36"
+      draggable="false"
+    />
     <span class="display wordmark">Rank Distribution</span>
   </a>
 

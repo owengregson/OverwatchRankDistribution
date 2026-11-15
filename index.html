@@ -1,5 +1,6 @@
 <!doctype html>
-<html lang="en">
+<!-- `loading` holds the page's entrance animations until the loading screen opens (src/lib/loader.js). -->
+<html lang="en" class="loading">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,10 +9,70 @@
       name="description"
       content="Interactive competitive rank distribution: move across the curve to see which rank sits at every percentile."
     />
-    <link rel="icon" href="/assets/images/Overwatch_Icon.webp" />
-    <title>Rank Distribution</title>
+    <link rel="icon" type="image/png" href="/assets/images/favicon.png" />
+    <title>Overwatch Rank Distribution</title>
+
+    <!-- Navy from the very first paint, before any stylesheet arrives. -->
+    <style>
+      html {
+        background: #0a1230;
+      }
+    </style>
+    <!-- What the loading screen needs. The rest of the styles come with the app (src/main.js). -->
+    <link rel="stylesheet" href="/src/styles/tokens.css" />
+    <link rel="stylesheet" href="/src/styles/fonts.css" />
+    <link rel="stylesheet" href="/src/styles/loader.css" />
+    <noscript>
+      <style>
+        .loader {
+          display: none;
+        }
+      </style>
+    </noscript>
   </head>
   <body>
+    <!--
+      The loading screen: styled by src/styles/loader.css, driven by src/lib/loader.js.
+      It is plain markup so it shows before any script has run. The logo is
+      assets/images/overwatch_logo_light_fill.svg, inlined for the same reason.
+    -->
+    <div
+      id="loader"
+      class="loader"
+      role="progressbar"
+      aria-label="Loading Overwatch Rank Distribution"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      aria-valuenow="0"
+    >
+      <div class="loader__stage">
+        <div class="loader__mark">
+          <svg class="loader__orbit" viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="loader__orbit-track" cx="60" cy="60" r="57" />
+            <circle class="loader__orbit-arc" cx="60" cy="60" r="57" pathLength="100" />
+          </svg>
+          <svg class="loader__logo" viewBox="0 1 48 48" fill="none" aria-hidden="true">
+            <path
+              fill="#ed6516"
+              d="M13.9 14.87a14.284 14.284 0 0 1 20.2 0l4.043-4.042a20 20 0 0 0-28.286 0z"
+            />
+            <path
+              fill="#fff"
+              d="m39.312 12.104-4.063 4.062a14.29 14.29 0 0 1 .995 16.159l-7.353-7.355-4.006-9.413h-.02V28.28l7.938 7.938a14.29 14.29 0 0 1-17.606 0l7.939-7.938V15.605l-4.027 9.365-7.355 7.355a14.29 14.29 0 0 1 .997-16.159l-4.063-4.062a20.001 20.001 0 1 0 30.624 0"
+            />
+          </svg>
+        </div>
+
+        <div class="loader__bar">
+          <div class="loader__fill"></div>
+        </div>
+        <p class="loader__status">
+          <span>Loading</span>
+          <span class="loader__percent">0%</span>
+        </p>
+      </div>
+    </div>
+
     <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
   </body>
