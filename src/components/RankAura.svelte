@@ -225,7 +225,10 @@
     animation: breathe 4.2s ease-in-out infinite;
   }
 
-  /* A hairline of light through the centre: white-hot in the middle, coloured, then gone. */
+  /*
+   * A hairline of light through the centre: white-hot in the middle, then
+   * coloured, dying away quickly so only a faint tail reaches the ends.
+   */
   .streak {
     width: calc(var(--unit) * var(--length));
     height: max(1px, calc(var(--unit) * var(--thickness)));
@@ -233,11 +236,15 @@
     background: linear-gradient(
       90deg,
       transparent,
-      color-mix(in srgb, var(--color) 50%, transparent) 20%,
-      color-mix(in srgb, var(--color) 55%, #fff) 42%,
+      color-mix(in srgb, var(--color) 7%, transparent) 14%,
+      color-mix(in srgb, var(--color) 24%, transparent) 27%,
+      color-mix(in srgb, var(--color) 58%, transparent) 37%,
+      color-mix(in srgb, var(--color) 55%, #fff) 45%,
       #fff 50%,
-      color-mix(in srgb, var(--color) 55%, #fff) 58%,
-      color-mix(in srgb, var(--color) 50%, transparent) 80%,
+      color-mix(in srgb, var(--color) 55%, #fff) 55%,
+      color-mix(in srgb, var(--color) 58%, transparent) 63%,
+      color-mix(in srgb, var(--color) 24%, transparent) 73%,
+      color-mix(in srgb, var(--color) 7%, transparent) 86%,
       transparent
     );
     filter: blur(calc(var(--unit) * 1.5));
