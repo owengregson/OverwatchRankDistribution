@@ -15,7 +15,7 @@
  * `color` is the tier's official accent colour.
  *
  * `glow` is the light effect behind the icon, as in game: metal tiers have
- * none, then 'soft', 'radiant', 'flare' and 'blaze' (see RankAura.svelte).
+ * none, then 'soft', 'bright', 'radiant', 'flare' and 'blaze' (see RankAura.svelte).
  *
  * `icon` is the tier's image in `assets/images`. The images vary in shape
  * and scale; their sizes are measured, not written here. After adding or
@@ -28,7 +28,7 @@ const TIERS = {
   gold: { id: 'gold', name: 'Gold', color: '#daa73e', icon: 'Rank_Gold_c.png' },
   platinum: { id: 'platinum', name: 'Platinum', aliases: ['plat'], color: '#98d9ba', icon: 'Rank_Platinum_c.png' },
   emerald: { id: 'emerald', name: 'Emerald', color: '#00d87f', glow: 'soft', icon: 'Rank_Emerald_c.png' },
-  diamond: { id: 'diamond', name: 'Diamond', color: '#5d9ef2', glow: 'soft', icon: 'Rank_Diamond_c.png' },
+  diamond: { id: 'diamond', name: 'Diamond', color: '#5d9ef2', glow: 'bright', icon: 'Rank_Diamond_c.png' },
   master: {
     id: 'master',
     name: 'Master',

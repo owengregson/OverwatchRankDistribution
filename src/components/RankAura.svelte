@@ -43,8 +43,11 @@
   const STREAK_OPACITY = 0.8;
 
   const EFFECTS = {
-    // Emerald, Diamond
-    soft: { halo: { reach: 580, peak: 24 } },
+    // Emerald
+    soft: { halo: { reach: 580, peak: 27.6 } },
+
+    // Diamond: the same halo a quarter brighter, as its blue is hard to see against the navy page.
+    bright: { halo: { reach: 580, peak: 34.5 } },
 
     // Master
     radiant: {
