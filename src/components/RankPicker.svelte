@@ -23,7 +23,7 @@
         title={option.name}
         onclick={() => onpick(option, number)}
       >
-        <RankBadge tier={option} size={iconSize} align="center" animated={false} />
+        <RankBadge tier={option} size={iconSize} align="center" animated={false} effects={false} />
       </button>
     {/each}
   </div>

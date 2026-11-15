@@ -99,15 +99,6 @@
     scale: 1 1;
   }
 
-  .icon {
-    transition: filter 320ms var(--ease-out);
-  }
-
-  .active .icon,
-  .tier:hover .icon {
-    filter: drop-shadow(0 0 12px color-mix(in srgb, var(--color) 70%, transparent));
-  }
-
   .name {
     margin-top: 5px;
     font-size: 17px;

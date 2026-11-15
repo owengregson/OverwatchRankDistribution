@@ -12,6 +12,7 @@
   length such as "var(--badge-size)" so a parent can size it responsively.
 -->
 <script>
+  import RankAura from '@/components/RankAura.svelte';
   import { imageUrl } from '@/lib/assets.js';
   import { dissolve, pop, slide } from '@/lib/motion.js';
   import { ladder } from '@/lib/state/app.svelte.js';
@@ -28,6 +29,8 @@
     align = 'bottom',
     /** Animate when the tier or division changes. */
     animated = true,
+    /** Show the tier's light effect (glow, flare, sparkles). Turn off for tiny icons. */
+    effects = true,
   } = $props();
 
   const canvas = ladder.iconCanvas;
@@ -47,16 +50,19 @@
 >
   <div class="slot icon-slot">
     {#key tier.id}
-      <img
-        class="icon"
-        src={imageUrl(tier.icon.file)}
-        alt=""
-        draggable="false"
-        style:width="calc(var(--unit) * {tier.icon.width})"
-        style:height="calc(var(--unit) * {tier.icon.height})"
-        in:pop={{ duration: animated ? 260 : 0 }}
-        out:dissolve={{ duration: animated ? 120 : 0 }}
-      />
+      <span class="art" in:pop={{ duration: animated ? 260 : 0 }} out:dissolve={{ duration: animated ? 120 : 0 }}>
+        {#if effects}
+          <RankAura effect={tier.glow} color={tier.color} />
+        {/if}
+        <img
+          class="icon"
+          src={imageUrl(tier.icon.file)}
+          alt=""
+          draggable="false"
+          style:width="calc(var(--unit) * {tier.icon.width})"
+          style:height="calc(var(--unit) * {tier.icon.height})"
+        />
+      </span>
     {/key}
   </div>
 
@@ -106,6 +112,13 @@
 
   .centered .icon-slot {
     place-items: center;
+  }
+
+  /* The icon with its light effect behind it. isolation keeps the effect above the page background. */
+  .art {
+    position: relative;
+    display: block;
+    isolation: isolate;
   }
 
   .icon {

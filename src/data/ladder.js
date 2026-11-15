@@ -7,6 +7,9 @@
  *
  * `color` is the tier's official accent colour.
  *
+ * `glow` is the light effect behind the icon, as in game: metal tiers have
+ * none, then 'soft', 'radiant', 'flare' and 'blaze' (see RankAura.svelte).
+ *
  * `icon.width` / `icon.height` are the pixel sizes of the cropped artwork in
  * `assets/images`. The crops all come from the same canvas, so RankBadge uses
  * these numbers to draw every icon at one shared scale. Update them if an
@@ -51,6 +54,7 @@ export const LADDER_CONFIG = {
       name: 'Emerald',
       minSr: 2500,
       color: '#00d87f',
+      glow: 'soft',
       icon: { file: 'Rank_Emerald_c.png', width: 382, height: 418 },
     },
     {
@@ -58,6 +62,7 @@ export const LADDER_CONFIG = {
       name: 'Diamond',
       minSr: 3000,
       color: '#5d9ef2',
+      glow: 'soft',
       icon: { file: 'Rank_Diamond_c.png', width: 431, height: 408 },
     },
     {
@@ -66,6 +71,7 @@ export const LADDER_CONFIG = {
       aliases: ['masters'],
       minSr: 3500,
       color: '#8ae956',
+      glow: 'radiant',
       icon: { file: 'Rank_Master_c.png', width: 432, height: 348 },
     },
     {
@@ -74,6 +80,7 @@ export const LADDER_CONFIG = {
       aliases: ['grandmasters', 'gm'],
       minSr: 4000,
       color: '#8b6ffc',
+      glow: 'flare',
       icon: { file: 'Rank_Grandmaster_c.png', width: 430, height: 273 },
     },
     {
@@ -82,6 +89,7 @@ export const LADDER_CONFIG = {
       aliases: ['champions', 'champ'],
       minSr: 4500,
       color: '#cd7dfc',
+      glow: 'blaze',
       icon: { file: 'Rank_Champion_c.png', width: 430, height: 313 },
     },
   ],

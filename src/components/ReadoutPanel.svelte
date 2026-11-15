@@ -22,7 +22,6 @@
   </header>
 
   <div class="hero">
-    <div class="glow"></div>
     <RankBadge tier={reading.tier} division={reading.division.number} size="var(--badge-size)" />
     <div class="identity">
       <h2 class="display name">{reading.tier.name}<span class="division">{reading.division.number}</span></h2>
@@ -91,17 +90,6 @@
     display: flex;
     align-items: center;
     gap: 18px;
-  }
-
-  .glow {
-    position: absolute;
-    left: -30px;
-    top: 50%;
-    width: 170px;
-    aspect-ratio: 1;
-    translate: 0 -50%;
-    background: radial-gradient(closest-side, color-mix(in srgb, var(--tier) 34%, transparent), transparent);
-    pointer-events: none;
   }
 
   .identity {
