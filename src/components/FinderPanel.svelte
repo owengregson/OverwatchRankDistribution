@@ -152,7 +152,7 @@
     position: relative;
     display: grid;
     grid-template-columns: repeat(var(--count), minmax(0, 1fr));
-    width: 204px;
+    width: 186px;
     flex: none;
     padding: 2px;
     background: rgb(5 10 26 / 0.55);

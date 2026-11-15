@@ -12,7 +12,12 @@
   /** +1 when the cursor is above the pin, -1 below, 0 on it. */
   const direction = $derived(pinned ? Math.sign(reading.sr - pinned.sr) : 0);
 
-  const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
+  /** "+7 divs", "−1 div", "same div": how far the cursor's rank is from the pin, signed like the SR gap. */
+  const sign = $derived(direction < 0 ? '−' : direction > 0 ? '+' : '');
+  const ladderGap = $derived.by(() => {
+    const count = comparison?.divisionGap ?? 0;
+    return count === 0 ? 'Same div' : `${sign}${count} div${count === 1 ? '' : 's'}`;
+  });
 </script>
 
 <section class="panel compare" class:pinned>
@@ -28,7 +33,7 @@
   {#if comparison}
     <div class="body" in:slide>
       <div class="side">
-        <RankBadge tier={pinned.tier} division={pinned.division.number} size={40} />
+        <RankBadge tier={pinned.tier} division={pinned.division.number} size={44} />
         <div>
           <div class="display rank">{pinned.division.name}</div>
           <div class="numeric meta">{formatSr(pinned.sr)} SR · pinned</div>
@@ -41,16 +46,14 @@
 
       <dl class="gap">
         <div>
-          <dt class="eyebrow">SR gap</dt>
-          <dd class="display numeric">{direction < 0 ? '−' : direction > 0 ? '+' : ''}{formatSr(comparison.srGap)}</dd>
+          <dt class="eyebrow">{ladderGap}</dt>
+          <dd class="display numeric">
+            {sign}{formatSr(comparison.srGap)} <small>SR</small>
+          </dd>
         </div>
         <div>
           <dt class="eyebrow">Between</dt>
           <dd class="display numeric">{formatPercent(comparison.playersBetween)}</dd>
-        </div>
-        <div>
-          <dt class="eyebrow">Ladder</dt>
-          <dd class="display numeric">{plural(comparison.divisionGap, 'div')}</dd>
         </div>
       </dl>
     </div>
@@ -117,10 +120,10 @@
 
   /* One row: the pinned rank, chevrons pointing at the cursor's rank, then the gap. */
   .body {
-    display: grid;
-    grid-template-columns: auto auto 1fr;
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
+    gap: 8px 10px;
   }
 
   .side {
@@ -174,18 +177,27 @@
     opacity: 0.35;
   }
 
+  /* Takes the rest of the row, or drops to a row of its own when the panel is narrow. */
   .gap {
     display: flex;
+    flex: 1 1 auto;
     justify-content: space-between;
-    gap: 8px;
+    gap: 10px;
     margin: 0;
-    padding-left: 10px;
-    border-left: 1px solid var(--line);
   }
 
   .gap dt {
     font-size: 9px;
     letter-spacing: 0.1em;
+    white-space: nowrap;
+  }
+
+  .gap small {
+    font-family: var(--font-body);
+    font-weight: var(--font-body-weight);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--ice-400);
   }
 
   .gap dd {
