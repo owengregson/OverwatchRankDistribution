@@ -43,6 +43,25 @@
   const modeIndex = $derived(MODES.indexOf(mode));
   const current = $derived(app.reading.division);
 
+  /**
+   * The tabs are as wide as their labels, so the thumb behind the selected
+   * one is placed from their measured widths: it starts where the tabs
+   * before it end and is as wide as its own tab. Null until measured.
+   *
+   * The sizes come from a ResizeObserver, which reports fractions of a
+   * pixel (offsetWidth rounds, leaving the thumb visibly off its tab) and
+   * reports again when the font arrives or the panel changes width.
+   */
+  let tabSizes = $state([]);
+  const tabWidth = (i) => tabSizes[i]?.[0].inlineSize ?? 0;
+  const thumb = $derived.by(() => {
+    const width = tabWidth(modeIndex);
+    if (!width) return null;
+    let left = 0;
+    for (let i = 0; i < modeIndex; i++) left += tabWidth(i);
+    return { left, width };
+  });
+
   function setMode(id) {
     modeId = id;
     entry = null;
@@ -77,14 +96,17 @@
 <section class="panel finder" id={FINDER_PANEL_ID}>
   <header>
     <h2 class="display title">Find my rank</h2>
-    <div class="tabs" role="tablist" aria-label="Find by" style:--index={modeIndex} style:--count={MODES.length}>
-      <span class="thumb"></span>
-      {#each MODES as m (m.id)}
+    <div class="tabs" role="tablist" aria-label="Find by">
+      {#if thumb}
+        <span class="thumb" style:width="{thumb.width}px" style:translate="{thumb.left}px 0"></span>
+      {/if}
+      {#each MODES as m, i (m.id)}
         <button
           type="button"
           role="tab"
           aria-selected={m.id === modeId}
           class:selected={m.id === modeId}
+          bind:borderBoxSize={tabSizes[i]}
           onclick={() => setMode(m.id)}
         >
           {m.label}
@@ -131,6 +153,8 @@
     display: grid;
     gap: 10px;
     padding: 13px 20px 13px;
+    /* Lets the tabs size their padding from the panel's width (cqi units below). */
+    container-type: inline-size;
   }
 
   header {
@@ -147,35 +171,59 @@
     white-space: nowrap;
   }
 
-  /* Segmented control with a thumb that slides to the selected tab. */
+  /*
+   * Segmented control. Each tab is as wide as its label plus the same
+   * padding either side, and a thumb slides and resizes to sit behind the
+   * selected one (its size and position are set from the script).
+   *
+   * --inset is the gap between the frame and the thumb, on all four sides.
+   * --pad is the space either side of a label: 12px in a wide panel, down
+   * to 8px in the narrowest, where the tabs must still fit on the title's row.
+   */
   .tabs {
+    --inset: 3px;
+    --pad: clamp(8px, 5cqi - 6px, 12px);
+    --tracking: 0.08em;
     position: relative;
-    display: grid;
-    grid-template-columns: repeat(var(--count), minmax(0, 1fr));
-    width: 186px;
+    display: flex;
     flex: none;
-    padding: 2px;
+    padding: var(--inset);
     background: rgb(5 10 26 / 0.55);
     border: 1px solid var(--line);
   }
 
   .thumb {
     position: absolute;
-    inset: 2px auto 2px 2px;
-    width: calc((100% - 4px) / var(--count));
-    translate: calc(var(--index) * 100%) 0;
+    inset: var(--inset) auto var(--inset) var(--inset);
     background: var(--ice-100);
-    transition: translate 320ms var(--ease-out);
+    box-shadow: 0 1px 5px rgb(0 0 0 / 0.4);
+    transition:
+      translate 320ms var(--ease-out),
+      width 320ms var(--ease-out);
   }
 
   .tabs button {
     position: relative;
-    padding: 4px 0;
+    display: grid;
+    place-items: center;
+    height: 22px;
+    /*
+     * Letter-spacing leaves a gap after the last letter; the extra on the
+     * left keeps the label centred. The 1px on top centres the capitals,
+     * which sit a pixel high in this font's line.
+     */
+    padding: 1px var(--pad) 0 calc(var(--pad) + var(--tracking));
     font-size: 11px;
-    letter-spacing: 0.08em;
+    line-height: 1;
+    letter-spacing: var(--tracking);
     text-transform: uppercase;
+    white-space: nowrap;
     color: var(--ice-300);
     transition: color 200ms;
+  }
+
+  .tabs button:focus-visible {
+    outline-offset: -1px;
   }
 
   .tabs button:hover {
