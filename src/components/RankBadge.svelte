@@ -52,7 +52,7 @@
     {#key tier.id}
       <span class="art" in:pop={{ duration: animated ? 260 : 0 }} out:dissolve={{ duration: animated ? 120 : 0 }}>
         {#if effects}
-          <RankAura effect={tier.glow} color={tier.color} />
+          <RankAura effect={tier.glow} color={tier.color} layer="back" />
         {/if}
         <img
           class="icon"
@@ -62,6 +62,9 @@
           style:width="calc(var(--unit) * {tier.icon.width})"
           style:height="calc(var(--unit) * {tier.icon.height})"
         />
+        {#if effects}
+          <RankAura effect={tier.glow} color={tier.color} layer="front" />
+        {/if}
       </span>
     {/key}
   </div>
@@ -114,7 +117,7 @@
     place-items: center;
   }
 
-  /* The icon with its light effect behind it. isolation keeps the effect above the page background. */
+  /* The icon between the two layers of its light effect. isolation keeps the effect within this element. */
   .art {
     position: relative;
     display: block;
