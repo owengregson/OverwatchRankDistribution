@@ -1,0 +1,28 @@
+/* Titles: Big Noodle Titling (upright + oblique). */
+@font-face {
+  font-family: 'Big Noodle Titling';
+  src: url('../../assets/fonts/big_noodle_titling.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Big Noodle Titling';
+  src: url('../../assets/fonts/big_noodle_titling_oblique.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+/*
+ * Body text: Config. Only the regular cut ships, and body copy is set bold
+ * (see --font-body-weight), so the browser emboldens this face.
+ */
+@font-face {
+  font-family: 'Config';
+  src: url('../../assets/fonts/config-regular-webfont.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}

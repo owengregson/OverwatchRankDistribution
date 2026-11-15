@@ -1,0 +1,148 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--navy-900);
+  color: var(--ice-100);
+  font-family: var(--font-body);
+  font-weight: var(--font-body-weight);
+  font-size: 14px;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+}
+
+button {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+img {
+  display: block;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--orange-hot);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--orange);
+  color: #fff;
+}
+
+/* ---------- Shared building blocks ---------- */
+
+/* Big Noodle only has one weight; never let the browser fake-bold it. */
+.display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-synthesis: none;
+  line-height: 0.9;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ice-400);
+}
+
+.numeric {
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Chamfered panel, the angular frame used all over Overwatch's UI.
+ * The element's own background is the border colour; ::before paints the
+ * fill 1px inside, so the diagonal corners get a border too.
+ */
+.panel {
+  --cut: var(--chamfer);
+  --shape: polygon(
+    var(--cut) 0,
+    100% 0,
+    100% calc(100% - var(--cut)),
+    calc(100% - var(--cut)) 100%,
+    0 100%,
+    0 var(--cut)
+  );
+  position: relative;
+  isolation: isolate;
+  clip-path: var(--shape);
+  background: linear-gradient(160deg, var(--line-strong), var(--line) 40%, var(--line));
+}
+
+.panel::before {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  z-index: -1;
+  clip-path: var(--shape);
+  background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom));
+  backdrop-filter: blur(10px);
+}
+
+/* Staggered entrance: set --i on the element to order it. */
+.rise {
+  animation: rise 700ms var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 90ms + 120ms);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

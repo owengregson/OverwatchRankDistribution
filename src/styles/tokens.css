@@ -1,0 +1,53 @@
+/*
+ * Design tokens. Components only use these variables, so the whole theme can
+ * be retuned from this file.
+ */
+
+/* Registered so the active tier colour can animate between ranks. */
+@property --tier {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #6ea6ff;
+}
+
+:root {
+  /* Surfaces: the deep navy of the Overwatch site hero */
+  --navy-950: #050a1a;
+  --navy-900: #0a1230;
+  --navy-800: #101b40;
+  --navy-700: #182654;
+  --navy-600: #24356b;
+  --navy-500: #34488a;
+
+  /* Text and lines: cool whites */
+  --ice-50: #ffffff;
+  --ice-100: #f1f5fc;
+  --ice-200: #dbe3f2;
+  --ice-300: #b4c0db;
+  --ice-400: #8794b6;
+  --ice-500: #5e6c93;
+
+  /* Accents */
+  --orange: #f06414;
+  --orange-hot: #ff8336;
+  --blue: #28a9ff;
+
+  --line: rgb(160 185 255 / 0.14);
+  --line-strong: rgb(160 185 255 / 0.28);
+  --panel-top: rgb(28 42 92 / 0.74);
+  --panel-bottom: rgb(12 20 50 / 0.82);
+
+  /* Type */
+  --font-display: 'Big Noodle Titling', 'Impact', 'Arial Narrow', sans-serif;
+  --font-body: 'Config', 'Segoe UI', system-ui, sans-serif;
+  --font-body-weight: 700;
+
+  /* Shape and motion */
+  --chamfer: 14px;
+  --radius: 4px;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --gutter: clamp(12px, 1.6vw, 22px);
+}
