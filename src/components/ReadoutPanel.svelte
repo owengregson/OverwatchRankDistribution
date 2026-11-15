@@ -31,7 +31,7 @@
   </div>
 
   <div class="percentile">
-    <span class="eyebrow">Better than</span>
+    <span class="eyebrow lead">Better than</span>
     <div class="display figure numeric">{formatPercent(reading.betterThan)}</div>
     <span class="eyebrow">of players</span>
     <div class="meter" aria-hidden="true">
@@ -67,8 +67,8 @@
   .readout {
     --badge-size: 88px;
     display: grid;
-    gap: 11px;
-    padding: 15px 20px 14px;
+    gap: 10px;
+    padding: 15px 20px 12px;
   }
 
   /* Accent line in the tier's colour along the top edge. */
@@ -138,17 +138,20 @@
 
   .percentile {
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto 1fr;
     align-items: baseline;
-    gap: 6px 12px;
+    gap: 2px 10px;
     padding: 9px 14px 12px;
     background: rgb(5 10 26 / 0.45);
     border-left: 3px solid var(--tier);
   }
 
+  .lead {
+    grid-column: 1 / -1;
+  }
+
   .figure {
     font-size: 46px;
-    text-align: center;
     color: var(--ice-50);
   }
 
@@ -156,6 +159,7 @@
     position: relative;
     grid-column: 1 / -1;
     height: 6px;
+    margin-top: 6px;
     background: rgb(160 185 255 / 0.14);
   }
 

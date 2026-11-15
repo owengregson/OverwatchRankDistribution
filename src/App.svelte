@@ -6,8 +6,6 @@
   import ReadoutPanel from '@/components/ReadoutPanel.svelte';
   import SiteHeader from '@/components/SiteHeader.svelte';
   import { app } from '@/lib/state/app.svelte.js';
-
-  const count = $derived(app.model?.points.length ?? 0);
 </script>
 
 <!-- --tier carries the colour of the rank under the cursor to everything on the page. -->
@@ -29,7 +27,7 @@
       <section class="panel stage rise" style:--i={0} aria-labelledby="page-title">
         <header class="intro">
           <div>
-            <p class="eyebrow"><span class="live">Live model</span>Competitive · {app.season.name}</p>
+            <p class="eyebrow">Competitive · {app.season.name}</p>
             <h1 id="page-title" class="display">Where do you <em>stand?</em></h1>
           </div>
           <ul class="keys" aria-label="Controls">
@@ -53,7 +51,10 @@
   {/if}
 
   <footer>
-    <span>Estimate fitted from {count} datapoint{count === 1 ? '' : 's'} for {app.season.name}. Not official figures.</span>
+    <span class="credit">
+      made with <span class="heart" role="img" aria-label="love">❤️</span> by
+      <a href="https://github.com/owengregson" target="_blank" rel="noopener noreferrer">@owengregson</a>
+    </span>
     <span>Unofficial fan project, not affiliated with Blizzard Entertainment.</span>
   </footer>
 </div>
@@ -102,16 +103,6 @@
     font-style: inherit;
     color: var(--tier);
     text-shadow: 0 0 34px color-mix(in srgb, var(--tier) 50%, transparent);
-  }
-
-  .live {
-    display: inline-block;
-    margin-right: 10px;
-    padding: 2px 7px 1px;
-    border-radius: 3px;
-    background: var(--blue);
-    color: #fff;
-    letter-spacing: 0.08em;
   }
 
   .keys {
@@ -183,6 +174,43 @@
     padding: 10px calc(var(--gutter) + 4px) 12px;
     font-size: 11px;
     color: var(--ice-500);
+  }
+
+  .credit {
+    color: var(--ice-400);
+  }
+
+  .heart {
+    display: inline-block;
+    animation: heartbeat 1.6s ease-in-out infinite;
+  }
+
+  .credit a {
+    color: var(--ice-100);
+    text-decoration: none;
+    background: linear-gradient(var(--orange), var(--orange)) left bottom / 0 2px no-repeat;
+    transition:
+      color 200ms,
+      background-size 300ms var(--ease-out);
+  }
+
+  .credit a:hover {
+    color: var(--orange-hot);
+    background-size: 100% 2px;
+  }
+
+  @keyframes heartbeat {
+    0%,
+    40%,
+    100% {
+      scale: 1;
+    }
+    15% {
+      scale: 1.3;
+    }
+    28% {
+      scale: 1.12;
+    }
   }
 
   .failed {
