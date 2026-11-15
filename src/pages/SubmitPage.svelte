@@ -78,7 +78,7 @@
   <section class="panel card rise" aria-labelledby="submit-title">
     <div class="bar"></div>
     <p class="eyebrow">Help sharpen the curve</p>
-    <h1 id="submit-title" class="display">Submit a <em>datapoint</em></h1>
+    <h1 id="submit-title" class="display slanted">Submit a <em>datapoint</em></h1>
 
     {#if !backend.canSubmit}
       <p class="lede">Submissions are not open yet. Check back soon.</p>

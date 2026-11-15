@@ -32,7 +32,7 @@
 
 <section class="panel login rise" aria-labelledby="login-title">
   <p class="eyebrow">Restricted</p>
-  <h1 id="login-title" class="display">Admin sign in</h1>
+  <h1 id="login-title" class="display slanted">Admin sign in</h1>
 
   {#if backend.name === 'static'}
     <p class="note">This site is not connected to a database yet, so there is nothing to manage.</p>

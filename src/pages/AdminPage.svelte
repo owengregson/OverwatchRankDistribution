@@ -58,7 +58,7 @@
             Signed in as {session.email}
             {#if backend.name === 'local'}<span class="chip warn">Development data, this browser only</span>{/if}
           </p>
-          <h1 id="admin-title" class="display">Model <em>control</em></h1>
+          <h1 id="admin-title" class="display slanted">Model <em>control</em></h1>
         </div>
         <button type="button" class="btn small" onclick={signOut}>Sign out</button>
       </header>

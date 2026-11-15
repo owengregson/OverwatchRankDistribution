@@ -21,7 +21,7 @@
       <header class="intro">
         <div>
           <p class="eyebrow">Competitive · {app.season.name}</p>
-          <h1 id="page-title" class="display">Where do you <em>stand?</em></h1>
+          <h1 id="page-title" class="display slanted">Where do you <em>stand?</em></h1>
         </div>
         <ul class="keys" aria-label="Controls">
           <li class="touch">Drag to explore</li>

@@ -82,6 +82,16 @@ img {
   text-transform: uppercase;
 }
 
+/*
+ * Page titles lean, as they do in game. The oblique cut of Big Noodle only
+ * leans about 3 degrees, so the rest of the slant is applied here.
+ */
+.slanted {
+  font-style: italic;
+  transform: skewX(-9deg);
+  transform-origin: 0 100%;
+}
+
 .eyebrow {
   font-size: 11px;
   letter-spacing: 0.16em;
