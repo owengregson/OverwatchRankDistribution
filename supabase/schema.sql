@@ -1,0 +1,194 @@
+-- Rank Distribution: database schema for Supabase.
+--
+-- Run this once in the Supabase dashboard:
+--   SQL Editor → New query → paste this whole file → Run.
+-- It is safe to run again; it only creates what is missing.
+--
+-- Then make yourself an admin (see the last section of this file).
+--
+-- Security model, enforced here by row-level security (RLS) and not by the
+-- website's code:
+--   * Anyone can read seasons and their datapoints (the site needs them).
+--   * Anyone can add a submission, but only as "pending", and cannot read
+--     submissions back.
+--   * Only users listed in the `admins` table can read submissions or change
+--     anything.
+
+-- ---------------------------------------------------------------- Tables
+
+create table if not exists public.seasons (
+  id          text primary key check (id ~ '^[a-z0-9-]{1,40}$'),
+  year        int  not null,
+  number      int  not null,
+  name        text not null check (char_length(name) between 1 and 60),
+  model       text not null default 'normal',
+  created_at  timestamptz not null default now()
+);
+
+create table if not exists public.submissions (
+  id           uuid primary key default gen_random_uuid(),
+  season_id    text not null references public.seasons (id) on delete cascade,
+  rank         text not null check (rank ~ '^[A-Za-z]{3,20} [1-5]$'),
+  better_than  numeric not null check (better_than > 0 and better_than < 100),
+  proof_url    text not null check (proof_url ~* '^https?://' and char_length(proof_url) <= 500),
+  status       text not null default 'pending' check (status in ('pending', 'approved', 'denied')),
+  created_at   timestamptz not null default now(),
+  reviewed_at  timestamptz
+);
+
+-- A datapoint says: a player at this rank (or exact SR) is better than X% of players.
+create table if not exists public.datapoints (
+  id             uuid primary key default gen_random_uuid(),
+  season_id      text not null references public.seasons (id) on delete cascade,
+  rank           text,
+  sr             int check (sr between 0 and 5000),
+  better_than    numeric not null check (better_than > 0 and better_than < 100),
+  weight         numeric not null default 1 check (weight > 0),
+  note           text check (char_length(note) <= 300),
+  submission_id  uuid references public.submissions (id) on delete set null,
+  created_at     timestamptz not null default now(),
+  -- exactly one of rank / sr
+  check ((rank is null) <> (sr is null))
+);
+
+create index if not exists datapoints_season_idx  on public.datapoints (season_id);
+create index if not exists submissions_status_idx on public.submissions (status, created_at desc);
+
+-- Who is an admin. Nobody can read or write this table through the API;
+-- rows are added from the SQL editor (see the end of this file).
+create table if not exists public.admins (
+  user_id uuid primary key references auth.users (id) on delete cascade
+);
+
+-- ------------------------------------------------------------- Functions
+
+-- True when the signed-in user is an admin. Runs with the owner's rights so
+-- it can look at the admins table, which is otherwise closed.
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (select 1 from public.admins where user_id = (select auth.uid()));
+$$;
+
+-- Approving a submission adds it to the season's datapoints and marks it
+-- approved, in one transaction.
+create or replace function public.approve_submission(submission uuid, point_weight numeric default 1)
+returns void
+language plpgsql
+set search_path = ''
+as $$
+declare
+  pending public.submissions;
+begin
+  if not public.is_admin() then
+    raise exception 'Only an admin can approve submissions.';
+  end if;
+
+  select * into pending
+  from public.submissions
+  where id = submission and status = 'pending'
+  for update;
+
+  if not found then
+    raise exception 'That submission was already reviewed.';
+  end if;
+
+  insert into public.datapoints (season_id, rank, better_than, weight, note, submission_id)
+  values (pending.season_id, pending.rank, pending.better_than, point_weight, 'Community submission', pending.id);
+
+  update public.submissions
+  set status = 'approved', reviewed_at = now()
+  where id = pending.id;
+end;
+$$;
+
+-- Stops the review queue being flooded: no new submissions while 500 are waiting.
+create or replace function public.limit_pending_submissions()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if (select count(*) from public.submissions where status = 'pending') >= 500 then
+    raise exception 'The review queue is full. Please try again later.';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists limit_pending_submissions on public.submissions;
+create trigger limit_pending_submissions
+  before insert on public.submissions
+  for each row execute function public.limit_pending_submissions();
+
+-- ----------------------------------------------------------- Permissions
+
+alter table public.seasons     enable row level security;
+alter table public.datapoints  enable row level security;
+alter table public.submissions enable row level security;
+alter table public.admins      enable row level security;
+
+revoke all on public.seasons, public.datapoints, public.submissions, public.admins from anon, authenticated;
+
+grant select on public.seasons, public.datapoints to anon, authenticated;
+grant insert, update, delete on public.seasons, public.datapoints to authenticated;
+
+-- Visitors may only set these four columns; status always starts as 'pending'.
+grant insert (season_id, rank, better_than, proof_url) on public.submissions to anon, authenticated;
+grant select, update, delete on public.submissions to authenticated;
+
+grant execute on function public.is_admin() to anon, authenticated;
+grant execute on function public.approve_submission(uuid, numeric) to authenticated;
+
+drop policy if exists "Anyone can read seasons"        on public.seasons;
+drop policy if exists "Admins manage seasons"          on public.seasons;
+drop policy if exists "Anyone can read datapoints"     on public.datapoints;
+drop policy if exists "Admins manage datapoints"       on public.datapoints;
+drop policy if exists "Anyone can submit a datapoint"  on public.submissions;
+drop policy if exists "Admins review submissions"      on public.submissions;
+
+create policy "Anyone can read seasons" on public.seasons
+  for select using (true);
+create policy "Admins manage seasons" on public.seasons
+  for all to authenticated using (public.is_admin()) with check (public.is_admin());
+
+create policy "Anyone can read datapoints" on public.datapoints
+  for select using (true);
+create policy "Admins manage datapoints" on public.datapoints
+  for all to authenticated using (public.is_admin()) with check (public.is_admin());
+
+create policy "Anyone can submit a datapoint" on public.submissions
+  for insert to anon, authenticated
+  with check (status = 'pending' and reviewed_at is null);
+create policy "Admins review submissions" on public.submissions
+  for all to authenticated using (public.is_admin()) with check (public.is_admin());
+
+-- ------------------------------------------------------------- Seed data
+
+insert into public.seasons (id, year, number, name)
+values ('2026-season-5', 2026, 5, '2026: Season 5')
+on conflict (id) do nothing;
+
+insert into public.datapoints (season_id, rank, better_than)
+select '2026-season-5', seed.rank, seed.better_than
+from (values ('Master 3', 97), ('Master 2', 98)) as seed (rank, better_than)
+where not exists (select 1 from public.datapoints where season_id = '2026-season-5');
+
+-- ------------------------------------------------------ Become the admin
+--
+-- 1. In the dashboard: Authentication → Users → Add user → Create new user.
+--    Enter your email and a strong password, and tick "Auto Confirm User".
+--    This email and password are what you type at /#/admin on the site.
+-- 2. Run this, with your email, in the SQL editor:
+--
+--      insert into public.admins (user_id)
+--      select id from auth.users where email = 'you@example.com';
+--
+-- 3. Recommended: Authentication → Sign In / Providers → turn off
+--    "Allow new users to sign up". (Signing up would not make anyone an
+--    admin, but there is no reason to allow it.)
