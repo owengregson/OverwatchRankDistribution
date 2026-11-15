@@ -76,7 +76,7 @@ Never put the database password or the `service_role` key in this repository or 
 
 ```
 assets/                    icons, fonts and cursors
-scripts/extract-cursors.mjs   turns the .cur files into right-sized PNGs
+scripts/                   measure-icons (icon sizes), extract-cursors (.cur → PNG)
 supabase/schema.sql        database tables and security rules
 src/
   config.js                database connection, author link
@@ -96,6 +96,7 @@ tests/                     model and ladder tests
 Common changes:
 
 - **Ladder** (a new tier, different SR ranges, colours): `src/data/ladder.js`.
-- **Rank light effects** (glow, flare rays, sparkles): the `EFFECTS` table in `src/components/RankAura.svelte`; which tier uses which is `glow` in the ladder.
-- **Cursor size**: the `1.5x` in `src/styles/cursors.css`. Keep cursors at or under 32 px, or Chrome swaps them for the system arrow near the page edge.
+- **Rank icons**: replace or add an image in `assets/images`, then run `node scripts/measure-icons.mjs`. The icon files differ in shape and scale, so the site measures how much each one actually covers and scales them to look the same size (`src/lib/ladder/iconSizing.js`).
+- **Rank light effects** (glow, streak, rays, sparkles): the `EFFECTS` table and the `RAY` and `STREAK_OPACITY` settings at the top of `src/components/RankAura.svelte`; which tier uses which is `glow` in the ladder.
+- **Cursors**: the site draws its own cursor (`src/components/CustomCursor.svelte`), because Chrome swaps any image cursor for the system one wherever it would cross the edge of the page. Size is `CURSOR_SCALE` in `src/lib/cursor/cursors.js`; which elements get the arrow, finger or text bar is `src/styles/cursors.css`. After replacing a `.cur`, run `node scripts/extract-cursors.mjs`.
 - **Theme**: `src/styles/tokens.css`.
