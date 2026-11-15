@@ -52,6 +52,7 @@
     fill: none;
     stroke: var(--orange-hot);
     stroke-width: 1;
+    opacity: 0;
     animation: halo 2.4s var(--ease-out) infinite;
   }
 
@@ -67,7 +68,7 @@
       opacity: 0.9;
     }
     to {
-      transform: rotate(45deg) scale(2.6);
+      transform: rotate(45deg) scale(1.9);
       opacity: 0;
     }
   }
