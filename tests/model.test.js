@@ -396,11 +396,29 @@ describe('readings', () => {
   });
 
   it('compares two readings regardless of order', () => {
-    const gap = compareReadings(readAt(model, ladder, 3800), readAt(model, ladder, 3700));
+    const gap = compareReadings(readAt(model, ladder, 3800), readAt(model, ladder, 3700), ladder);
     expect(gap.srGap).toBe(100);
     expect(gap.playersBetween).toBeCloseTo(0.01, 9);
     expect(gap.divisionGap).toBe(1);
     expect(gap.low.sr).toBe(3700);
+  });
+
+  it('says what a gap amounts to', () => {
+    // Master 3 beats 97% and Master 2 98%: the top 3% against the top 2%.
+    const gap = compareReadings(readAt(model, ladder, 3700), readAt(model, ladder, 3800), ladder);
+    expect(gap.rarity).toBeCloseTo(1.5, 9);
+    // A third of the players above Master 3 are passed on the way to Master 2.
+    expect(gap.passed).toBeCloseTo(1 / 3, 9);
+    // 1% of players in 100 SR, where the ladder as a whole averages 2%: a thin stretch.
+    expect(gap.crowding).toBeCloseTo(0.5, 9);
+  });
+
+  it('has nothing to say about a gap of nothing', () => {
+    const gap = compareReadings(readAt(model, ladder, 3700), readAt(model, ladder, 3700), ladder);
+    expect(gap.srGap).toBe(0);
+    expect(gap.rarity).toBeNull();
+    expect(gap.passed).toBeNull();
+    expect(gap.crowding).toBeNull();
   });
 });
 

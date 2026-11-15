@@ -9,8 +9,10 @@
  * they do not, the closest look is kept and the field is marked unsure.
  */
 import { parseRankScreen, readBetterThan, readNumber, readProgress, readRank, settle } from './parse.js';
-import { recognise, stopRecognising } from './ocr.js';
+import { recognise, stopRecognising, warmUp } from './ocr.js';
 
+/** Starts the text reader before there is anything to read, so the first screenshot does not wait for it. */
+export const prepareToRead = warmUp;
 /** Shuts the text reader down and frees its memory, e.g. when the page that used it is left. */
 export const stopReading = stopRecognising;
 

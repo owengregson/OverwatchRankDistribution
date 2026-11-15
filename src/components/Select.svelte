@@ -11,11 +11,26 @@
   typing jumps to the option that starts with what was typed.
 
   `options` is a list of { value, label }.
+
+  As a menu: with a `caption` the button always reads that, whatever is
+  chosen, and with `bare` it has none of a field's styling, so the parent
+  can dress it as its own (the header's "Older Seasons" tab). A bare
+  dropdown's list is as wide as its longest option, not as its button.
 -->
 <script>
   import { tick } from 'svelte';
 
-  let { value = $bindable(), options, label = undefined, title = undefined, compact = false, disabled = false, onchange } = $props();
+  let {
+    value = $bindable(),
+    options,
+    label = undefined,
+    title = undefined,
+    caption = undefined,
+    compact = false,
+    bare = false,
+    disabled = false,
+    onchange,
+  } = $props();
 
   /** Gap (px) between the button and its list, and between the list and the edge of the window. */
   const GAP = 4;
@@ -139,7 +154,9 @@
 <button
   bind:this={trigger}
   type="button"
-  class="input trigger"
+  class="trigger"
+  class:input={!bare}
+  class:bare
   class:compact
   class:open
   role="combobox"
@@ -153,7 +170,7 @@
   onclick={() => (open ? hide() : show())}
   {onkeydown}
 >
-  <span class="current">{selected?.label ?? ''}</span>
+  <span class="current">{caption ?? selected?.label ?? ''}</span>
   <svg class="chevron" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" /></svg>
 </button>
 
@@ -169,7 +186,8 @@
     popover="manual"
     style:left="{place.left}px"
     style:top="{place.top}px"
-    style:width="{place.width}px"
+    style:width={bare ? 'max-content' : `${place.width}px`}
+    style:min-width="{place.width}px"
     style:max-height="{place.maxHeight}px"
   >
     {#each options as option, i (option.value)}
@@ -233,6 +251,11 @@
   .open .chevron {
     rotate: 180deg;
     stroke: var(--orange-hot);
+  }
+
+  /* Bare: the arrow takes the colour of the text the parent gives the button. */
+  .bare:not(.open) .chevron {
+    stroke: currentColor;
   }
 
   /* The list is a popover: the browser centres those by default, so every position is set here. */

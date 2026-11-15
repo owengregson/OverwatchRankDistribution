@@ -1,4 +1,8 @@
-<!-- Add, rename and delete seasons. A season's datapoints are managed on the Datapoints tab. -->
+<!--
+  Add, rename and delete seasons, and say where each is in the site's
+  header: a tab of its own, or in the "Older Seasons" menu. A season's
+  datapoints are managed on the Datapoints tab.
+-->
 <script>
   import ConfirmButton from '@/components/ConfirmButton.svelte';
   import Select from '@/components/Select.svelte';
@@ -10,11 +14,18 @@
   import { toasts } from '@/lib/state/toasts.svelte.js';
 
   const thisYear = new Date().getFullYear();
-  const blank = () => ({ name: '', year: thisYear, number: null, ladder: DEFAULT_LADDER, model: DEFAULT_MODEL });
+  const blank = () => ({ name: '', year: thisYear, number: null, ladder: DEFAULT_LADDER, model: DEFAULT_MODEL, older: false });
 
   /** The ladders and curves on offer, as dropdown options. */
   const LADDERS = LADDER_CHOICES.map(({ id, label }) => ({ value: id, label }));
   const MODELS = MODEL_CHOICES.map(({ id, label }) => ({ value: id, label }));
+  /** Where a season can be in the header, as the value of its `older` field. */
+  const PLACES = [
+    { value: false, label: 'Own tab' },
+    { value: true, label: 'Older Seasons' },
+  ];
+  const PLACE_HINT =
+    'Where the season is in the header for every visitor: a tab of its own, or in the "Older Seasons" menu. A season only shows once it has a curve.';
 
   /** What the curve choices do, shown when one is hovered. */
   const MODEL_HINT =
@@ -32,6 +43,7 @@
     number: season.number,
     ladder: season.ladder ?? DEFAULT_LADDER,
     model: season.model ?? DEFAULT_MODEL,
+    older: Boolean(season.older),
   });
   const draftFor = (season) => drafts[season.id] ?? fieldsOf(season);
   const isDirty = (season) => {
@@ -86,6 +98,7 @@
     <span>Number</span>
     <span>Ladder</span>
     <span>Curve</span>
+    <span>In the header</span>
     <span>Fit</span>
     <span></span>
   </div>
@@ -101,6 +114,8 @@
       <Select compact label="Ladder" value={draft.ladder} options={LADDERS} onchange={(value) => change(season, 'ladder', value)} />
       <!-- Which curve is fitted to the season's datapoints. -->
       <Select compact label="Curve" title={MODEL_HINT} value={draft.model} options={MODELS} onchange={(value) => change(season, 'model', value)} />
+      <!-- Whether the season has a tab in the header or sits in its "Older Seasons" menu. -->
+      <Select compact label="In the header" title={PLACE_HINT} value={draft.older} options={PLACES} onchange={(value) => change(season, 'older', value)} />
       <span>
         <span class="chip {fit.model ? 'good' : 'bad'}" title={fit.error?.message}>
           {season.datapoints.length} datapoint{season.datapoints.length === 1 ? '' : 's'} · {fit.model ? 'fits' : 'no curve'}
@@ -125,6 +140,7 @@
     <input class="input compact" type="number" aria-label="New season number" placeholder="6" bind:value={adding.number} />
     <Select compact label="New season ladder" bind:value={adding.ladder} options={LADDERS} />
     <Select compact label="New season curve" title={MODEL_HINT} bind:value={adding.model} options={MODELS} />
+    <Select compact label="New season: in the header" title={PLACE_HINT} bind:value={adding.older} options={PLACES} />
     <span class="hint">Starts empty; add at least two datapoints.</span>
     <span class="actions">
       <button type="submit" class="btn small primary" disabled={busyId === 'new'}>Add season</button>
@@ -134,7 +150,7 @@
 
 <style>
   .table {
-    --columns: minmax(140px, 2fr) 76px 68px 180px 150px minmax(170px, 1.4fr) 200px;
+    --columns: minmax(130px, 2fr) 70px 62px 168px 138px 132px minmax(150px, 1.4fr) 190px;
   }
 
   .head,

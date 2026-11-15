@@ -148,6 +148,13 @@ class AppState {
 
   /** Seasons with enough data for a curve: the ones visitors can browse. */
   viewableSeasons = $derived(this.seasons.filter((season) => this.#fits.get(season.id).model));
+  /**
+   * Where those seasons are in the header: each of `tabSeasons` has a tab of
+   * its own, and `olderSeasons` (those marked `older`, newest first) share
+   * the "Older Seasons" menu. An admin moves a season between the two.
+   */
+  tabSeasons = $derived(this.viewableSeasons.filter((season) => !season.older));
+  olderSeasons = $derived(this.viewableSeasons.filter((season) => season.older).reverse());
 
   season = $derived(
     this.seasons.find((season) => season.id === this.seasonId) ?? this.viewableSeasons.at(-1) ?? this.seasons.at(-1),
@@ -166,7 +173,21 @@ class AppState {
   );
   /** What the first pin is compared with: the second pin, or the probe until there is one. */
   comparedReading = $derived(this.lockedReading ?? this.reading);
-  comparison = $derived(this.pinnedReading ? compareReadings(this.pinnedReading, this.comparedReading) : null);
+  comparison = $derived(
+    this.pinnedReading ? compareReadings(this.pinnedReading, this.comparedReading, this.ladder) : null,
+  );
+
+  /**
+   * A page with a rank of its own to show (the one picked on the submit
+   * form) puts its tier here, and takes it away when it is left.
+   */
+  featuredTier = $state.raw(null);
+  /**
+   * The rank the page is lit in: its colour is the backdrop's glow and every
+   * accent (--tier, set in App.svelte). The featured rank when a page has
+   * one, otherwise the rank under the chart's cursor.
+   */
+  accentTier = $derived(this.featuredTier ?? this.reading?.tier ?? null);
 
   /** The fit for any season: { model, error }. */
   fitOf(season) {

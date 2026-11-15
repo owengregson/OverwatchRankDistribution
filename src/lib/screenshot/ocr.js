@@ -3,8 +3,16 @@
  * to WebAssembly). The image never leaves their computer.
  *
  * The engine and its English data are about 7 MB. They are part of this
- * site's own files, not fetched from anyone else's server, and are only
- * downloaded the first time a screenshot is read.
+ * site's own files, not fetched from anyone else's server. So that nobody
+ * waits for them with a screenshot in hand, they are got ready ahead of
+ * time, in two steps:
+ *
+ *   download()   fetches the files into the browser's cache. Every page
+ *                does this in the background once it has opened (main.js).
+ *   warmUp()     starts the engine from those files. The submit page does
+ *                this as soon as it is shown (pages/SubmitPage.svelte).
+ *
+ * Neither is needed for recognise() to work: it does whatever is left to do.
  */
 import engineUrl from 'tesseract.js-core/tesseract-core-lstm.wasm.js?url';
 import fastEngineUrl from 'tesseract.js-core/tesseract-core-simd-lstm.wasm.js?url';
@@ -12,6 +20,7 @@ import workerUrl from 'tesseract.js/dist/worker.min.js?url';
 
 /** The folder the English data is served from: scripts/ocrData.js puts it at ocr/eng.traineddata.gz. */
 const LANGUAGE_FOLDER = 'ocr';
+const LANGUAGE = 'eng';
 
 /** How Tesseract should look at the image: text scattered about a screen, or one line of it. */
 const LAYOUT = { scattered: '11', page: '3', block: '6', line: '7' };
@@ -21,18 +30,63 @@ const SIMD_PROBE = new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 
 
 const absolute = (url) => new URL(url, document.baseURI).href;
 
+/** Where the engine's files are, as its worker will ask for them. */
+function files() {
+  const fast = WebAssembly.validate(SIMD_PROBE);
+  return {
+    worker: absolute(workerUrl),
+    core: absolute(fast ? fastEngineUrl : engineUrl),
+    languageFolder: absolute(LANGUAGE_FOLDER),
+  };
+}
+
+let downloading = null;
 let starting = null;
 /** Recognition jobs run one at a time, in the order they were asked for. */
 let queue = Promise.resolve();
 
+/** Fetches a file and throws it away: what matters is that the browser now has it in its cache. */
+async function fetchAhead(url) {
+  // Low priority: anything the page itself asks for goes first.
+  const response = await fetch(url, { priority: 'low' });
+  if (!response.ok) throw new Error(`Could not fetch ${url} (${response.status}).`);
+  await response.arrayBuffer();
+}
+
+/**
+ * Downloads the engine without starting it: its library, its worker, the
+ * engine itself and the English data. They are fetched once, by the page;
+ * the worker that later asks for the same addresses is answered from the
+ * browser's cache. Costs no memory beyond that cache, so it is safe to do
+ * on pages that may never read a screenshot.
+ *
+ * @returns {Promise<void>} settles when the files have arrived. It never
+ *          rejects: a download that failed is simply made again next time.
+ */
+export function download() {
+  const { worker, core, languageFolder } = files();
+  downloading ??= Promise.all([
+    import('tesseract.js'),
+    ...[worker, core, `${languageFolder}/${LANGUAGE}.traineddata.gz`].map(fetchAhead),
+  ]).then(
+    () => {},
+    () => {
+      downloading = null;
+    },
+  );
+  return downloading;
+}
+
 async function start() {
+  // The one download, whoever began it: the worker below then finds every file in the cache.
+  await download();
   const { createWorker } = await import('tesseract.js');
-  const fast = WebAssembly.validate(SIMD_PROBE);
+  const { worker, core, languageFolder } = files();
   // Engine mode 1: the neural-network recogniser only, which is all the engine files above contain.
-  return createWorker('eng', 1, {
-    workerPath: absolute(workerUrl),
-    corePath: absolute(fast ? fastEngineUrl : engineUrl),
-    langPath: absolute(LANGUAGE_FOLDER),
+  return createWorker(LANGUAGE, 1, {
+    workerPath: worker,
+    corePath: core,
+    langPath: languageFolder,
     // A plain same-origin worker, and nothing kept in the browser's storage.
     workerBlobURL: false,
     cacheMethod: 'none',
@@ -46,6 +100,14 @@ function engine() {
     throw error;
   });
   return starting;
+}
+
+/**
+ * Starts the engine ahead of the first reading, so that reading does not
+ * wait for it. The running engine holds memory until stopRecognising().
+ */
+export function warmUp() {
+  engine().catch(() => {});
 }
 
 /**
@@ -82,7 +144,7 @@ export function recognise(image, { layout = 'scattered', only = '' } = {}) {
   return job;
 }
 
-/** Shuts the engine down and frees its memory. It starts again if needed. */
+/** Shuts the engine down and frees its memory. It starts again if needed; its files stay in the browser's cache. */
 export function stopRecognising() {
   const running = starting;
   starting = null;

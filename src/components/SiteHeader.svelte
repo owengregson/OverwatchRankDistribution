@@ -1,5 +1,12 @@
-<!-- Light floating nav bar: brand tile, season tabs, page links and call to action. -->
+<!--
+  Light floating nav bar: brand tile, seasons, page links and call to action.
+
+  Seasons: each current one has a tab, and the older ones share an "Older
+  Seasons" menu ahead of the tabs. Which a season is, is its `older` field,
+  set in the admin panel's Seasons tab.
+-->
 <script>
+  import Select from '@/components/Select.svelte';
   import { imageUrl } from '@/lib/assets.js';
   import { backend } from '@/lib/backend/index.js';
   import { href, router } from '@/lib/router.svelte.js';
@@ -7,6 +14,8 @@
   import { focusFinder } from '@/lib/ui.js';
 
   const onHome = $derived(router.path === '');
+  /** The season on the chart is one of those in the "Older Seasons" menu. */
+  const viewingOlder = $derived(onHome && app.olderSeasons.some((season) => season.id === app.seasonId));
 
   /** The finder lives on the home page: go there first if needed. */
   async function findMyRank() {
@@ -54,7 +63,21 @@
   </a>
 
   <nav class="seasons" aria-label="Season" bind:this={seasonTabs}>
-    {#each app.viewableSeasons as season (season.id)}
+    <!-- The seasons an admin has put away share one menu, ahead of the tabs. -->
+    {#if app.olderSeasons.length}
+      <span class="older" class:current={viewingOlder}>
+        <Select
+          bare
+          caption="Older Seasons"
+          label="Older seasons"
+          value={onHome ? app.seasonId : null}
+          options={app.olderSeasons.map((season) => ({ value: season.id, label: season.name }))}
+          onchange={selectSeason}
+        />
+      </span>
+    {/if}
+
+    {#each app.tabSeasons as season (season.id)}
       <button
         type="button"
         class:current={onHome && season.id === app.seasonId}
@@ -146,12 +169,17 @@
     display: none;
   }
 
-  .seasons button {
+  /* The menu's button is drawn by Select; here it is dressed as one more tab. */
+  .older {
+    position: relative;
+    display: flex;
     flex: none;
   }
 
-  .seasons button {
+  .seasons button,
+  .older :global(.trigger) {
     position: relative;
+    flex: none;
     padding: 0 14px;
     font-size: 15px;
     color: var(--ice-500);
@@ -159,7 +187,12 @@
     transition: color 180ms;
   }
 
-  .seasons button::after {
+  .older :global(.trigger) {
+    gap: 7px;
+  }
+
+  .seasons button::after,
+  .older::after {
     content: '';
     position: absolute;
     inset: auto 14px 9px;
@@ -167,14 +200,19 @@
     background: var(--orange);
     scale: 0 1;
     transition: scale 300ms var(--ease-out);
+    pointer-events: none;
   }
 
   .seasons button:hover,
-  .seasons button.current {
+  .seasons button.current,
+  .older :global(.trigger:hover),
+  .older :global(.trigger.open),
+  .older.current :global(.trigger) {
     color: var(--navy-800);
   }
 
-  .seasons button.current::after {
+  .seasons button.current::after,
+  .older.current::after {
     scale: 1 1;
   }
 
@@ -299,9 +337,15 @@
       padding-right: 14px;
     }
 
-    .seasons button {
+    .seasons button,
+    .older :global(.trigger) {
       padding: 0 8px;
       font-size: 13px;
+    }
+
+    .seasons button::after,
+    .older::after {
+      inset-inline: 8px;
     }
 
     .cta {

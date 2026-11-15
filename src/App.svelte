@@ -23,8 +23,8 @@
   const route = $derived(ROUTES[router.path] ?? ROUTES['']);
 </script>
 
-<!-- --tier carries the colour of the rank under the cursor to everything on the page. -->
-<div class="app" class:fits-screen={route.fitsScreen} style:--tier={app.reading?.tier.color}>
+<!-- --tier carries the colour of the rank on show (under the chart's cursor, or picked on the submit form) to everything on the page. -->
+<div class="app" class:fits-screen={route.fitsScreen} style:--tier={app.accentTier?.color}>
   <Backdrop />
   <SiteHeader />
 

@@ -26,6 +26,8 @@ export function ocrData() {
       server.middlewares.use((request, response, next) => {
         if (request.url?.split('?')[0] !== `/${OCR_DATA_PATH}`) return next();
         response.setHeader('Content-Type', 'application/gzip');
+        // Kept by the browser, as the built site's host does: the page fetches it ahead of time and the reader's worker reuses that copy.
+        response.setHeader('Cache-Control', 'max-age=600');
         createReadStream(source).pipe(response);
       });
     },

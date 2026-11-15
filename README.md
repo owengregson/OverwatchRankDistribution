@@ -39,8 +39,10 @@ A published breakdown is turned into datapoints by adding up its shares from the
 Day to day, use the admin panel at `/#/admin`:
 
 - **Review queue**: pending submissions, each shown with its rank and exact SR next to what the current curve says there, with the screenshot. Approve (optionally with a weight) or deny.
-- **Datapoints**: every datapoint behind a season. Edit, add or delete, and see the fit update. "Rank or SR" accepts `Master 3` or `3700`.
-- **Seasons**: add, rename or delete seasons, and choose the ladder each was played on and the curve fitted to it (bell curve, or following the data). A new season stays hidden from visitors until it has enough datapoints for a curve.
+- **Datapoints**: every datapoint behind a season, as a grid of rank badges. Open one to edit or delete it, or the last tile to add one, and see the fit update. Where a datapoint sits is set with three controls: the rank (a dropdown), the division (a slider, 5 to 1) and the percent through that division (a slider, 0 to 99, the game's rank progress). At 0% it is stored as the rank, above that as the exact SR.
+- **Seasons**: add, rename or delete seasons, and choose the ladder each was played on, the curve fitted to it (bell curve, or following the data) and where it is in the header for every visitor: a tab of its own, or in the "Older Seasons" menu. A new season stays hidden from visitors until it has enough datapoints for a curve.
+
+The admin panel is linked from a card under the three steps on the submit page. The card is out of sight until the pointer rests on its place for a second, and goes again five seconds after the pointer leaves it.
 
 `src/data/seasons/*.json` holds a bundled copy of each season. The site shows it for the instant before live data loads, or if the database cannot be reached. Format:
 
@@ -62,17 +64,19 @@ While developing with the stand-in backend, the browser keeps its own copy of ea
 
 A season played on an older ladder adds `"ladder": "classic"` (the ladder before Emerald existed). Its rank names are then read on that ladder, where "Silver 5" is 1500 SR and not 1000, and the chart shows that ladder's tiers. Without the field a season is on today's ladder. The ladders are defined in `src/data/ladder.js`.
 
+A season with `"older": true` is listed in the header's "Older Seasons" menu; without the field it has a tab of its own. With a database this is the `older` column of `seasons`, which the admin panel sets. A database made before that column existed needs `supabase/schema.sql` run again to add it; until then every season loads as a tab.
+
 ## Submissions and the screenshot reader
 
 The submit page (`/#/submit`) starts with a screenshot of the game's rank screen (the one shown after a match, with "Rank progress" and "Higher ranked than"). The rest of the form is greyed out until there is one. The screenshot is then read on the visitor's own computer and the form filled in from it:
 
 - **The rank**, e.g. "Champion 4".
-- **Rank progress**, how far through that division the player is. With the rank it gives an exact SR: Champion 4 at 59% is 4,659 SR. A submission carries that SR, and approving it makes a datapoint at that SR and not at the start of the rank.
+- **Rank progress**, how far through that division the player is, from 0 to 99%. With the rank it gives an exact SR: Champion 4 at 59% is 4,659 SR. A submission carries that SR, and approving it makes a datapoint at that SR and not at the start of the rank.
 - **Higher ranked than**, the share of players the rank beats.
 
 The visitor checks the details, corrects anything misread, and sends it. Whatever could not be read is left for them to fill in.
 
-The reading is done by Tesseract, compiled to WebAssembly, in `src/lib/screenshot`: `ocr.js` runs the engine, `readRankScreen.js` looks at the screen (the whole of it first, then each line it found on its own, and each number once more with only digits allowed, keeping a number when the readings agree), and `parse.js` picks the three facts out of the text and is the part with tests. The engine and its English data are about 7 MB. They are served by this site, never fetched from another server, and only downloaded when a screenshot is added. `scripts/ocrData.js` is the small Vite plugin that puts the data file at a fixed address (`ocr/eng.traineddata.gz`).
+The reading is done by Tesseract, compiled to WebAssembly, in `src/lib/screenshot`: `ocr.js` runs the engine, `readRankScreen.js` looks at the screen (the whole of it first, then each line it found on its own, and each number once more with only digits allowed, keeping a number when the readings agree), and `parse.js` picks the three facts out of the text and is the part with tests. The engine and its English data are about 7 MB. They are served by this site, never fetched from another server. So that nobody waits for them with a screenshot in hand, every page downloads them in the background once it has opened (after the loading screen, never as part of it), and the submit page starts the engine from them as soon as it is shown. The engine only runs, and only holds memory, while the submit page is open. `scripts/ocrData.js` is the small Vite plugin that puts the data file at a fixed address (`ocr/eng.traineddata.gz`).
 
 It reads the English game client. In another language the form is simply left to fill in by hand.
 

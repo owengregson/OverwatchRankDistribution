@@ -2,6 +2,11 @@
   Compare two ranks. The first pin fixes one end and the gap is read to
   the cursor as it moves; the second pin fixes the other end, which leaves
   the comparison on screen while the cursor goes back to exploring.
+
+  Under the gap itself (SR, divisions, players between) are a few lines on
+  what it amounts to: how much rarer the higher rank is, how many of the
+  players ahead are passed on the way, and whether that stretch of the
+  ladder is crowded or thin next to the rest of it.
 -->
 <script>
   import RankBadge from '@/components/RankBadge.svelte';
@@ -22,6 +27,37 @@
   const ladderGap = $derived.by(() => {
     const count = comparison?.divisionGap ?? 0;
     return count === 0 ? 'Same div' : `${sign}${count} div${count === 1 ? '' : 's'}`;
+  });
+
+  /** "9.6×", "23×", "0.08×": a ratio to two figures. */
+  const times = (ratio) => `${ratio >= 10 ? Math.round(ratio) : ratio >= 1 ? ratio.toFixed(1) : ratio.toFixed(2)}×`;
+
+  /** A stretch of the ladder with this many times the average number of players for its length is called crowded, or thin. */
+  const CROWDED = 1.25;
+  const THIN = 0.8;
+
+  /**
+   * What the gap amounts to, in a line each, most telling first: the last
+   * lines are the ones dropped when the card is short of room. Each is
+   * [the figure, the rest of the line].
+   */
+  const facts = $derived.by(() => {
+    if (!comparison) return [];
+    const { low, high, rarity, passed, crowding } = comparison;
+    const lines = [];
+    // Kept short: each has to fit one line of the card at its narrowest.
+    if (rarity !== null) {
+      lines.push([`${times(rarity)} rarer`, `top ${formatPercent(high.top)} vs top ${formatPercent(low.top)}`]);
+    }
+    if (passed !== null) {
+      const from = low.division === high.division ? 'the lower point' : low.division.name;
+      lines.push([formatPercent(passed), `of those above ${from} are passed`]);
+    }
+    if (crowding !== null) {
+      const stretch = crowding >= CROWDED ? 'Crowded stretch' : crowding <= THIN ? 'Thin stretch' : 'Typical stretch';
+      lines.push([stretch, `${times(crowding)} the usual players per SR`]);
+    }
+    return lines;
   });
 </script>
 
@@ -77,6 +113,16 @@
         </div>
       </dl>
     </div>
+
+    <!-- What the gap amounts to. As many whole lines as there is room for are shown (see .facts). -->
+    {#if facts.length}
+      <ul class="facts" aria-label="What the gap amounts to">
+        <li class="none" aria-hidden="true"></li>
+        {#each facts as [figure, rest]}
+          <li><b>{figure}</b> {rest}</li>
+        {/each}
+      </ul>
+    {/if}
   {:else}
     <p class="hint" in:slide>
       Click the curve to pin a rank, move to measure the SR and player gap to any other rank, then click again
@@ -86,10 +132,64 @@
 </section>
 
 <style>
+  /*
+   * A column whose last part, the facts, gives way: on the chart page the
+   * card may be handed less height than it would like (the side column ends
+   * where the chart card does, see DistributionPage), and then it is the
+   * facts that shorten, never the rest.
+   */
   .compare {
-    display: grid;
+    display: flex;
+    flex-direction: column;
     gap: 9px;
+    min-height: 0;
     padding: 13px 20px 14px;
+  }
+
+  header,
+  .body,
+  .hint {
+    flex: none;
+  }
+
+  /*
+   * One fact to a line, each line the same height. The list is a column
+   * that wraps: when it is given less height than its lines need, those
+   * that do not fit move to a second column, which is off the edge and cut
+   * away. So only whole lines ever show, however much room there is. The
+   * empty first item is what lets even the first fact go.
+   */
+  .facts {
+    display: flex;
+    flex: 0 1 auto;
+    flex-flow: column wrap;
+    align-content: flex-start;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    list-style: none;
+    font-size: 11px;
+    line-height: 15px;
+    color: var(--ice-400);
+  }
+
+  .facts li {
+    flex: none;
+    width: 100%;
+    height: 15px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .facts .none {
+    height: 0;
+  }
+
+  .facts b {
+    font-weight: inherit;
+    color: var(--ice-100);
   }
 
   header {

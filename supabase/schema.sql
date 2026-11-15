@@ -25,11 +25,15 @@ create table if not exists public.seasons (
   model       text not null default 'normal',
   -- Which ladder the season was played on: an id from src/data/ladder.js.
   ladder      text not null default 'emerald',
+  -- Where the season is in the site's header: in the "Older Seasons" menu, or (false) a tab of its own.
+  older       boolean not null default false,
   created_at  timestamptz not null default now()
 );
 
 -- For a database made before seasons had a ladder.
 alter table public.seasons add column if not exists ladder text not null default 'emerald';
+-- For a database made before seasons could be moved into the "Older Seasons" menu.
+alter table public.seasons add column if not exists older boolean not null default false;
 
 create table if not exists public.submissions (
   id           uuid primary key default gen_random_uuid(),

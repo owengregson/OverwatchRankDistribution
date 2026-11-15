@@ -27,9 +27,10 @@
  *   deleteSeason(id)
  *
  * Shapes
- *   Season      { id, year, number, name, model, ladder?, datapoints: Datapoint[] }
+ *   Season      { id, year, number, name, model, ladder?, older?, datapoints: Datapoint[] }
  *               ladder is an id from src/data/ladder.js; without one the season is on the default ladder
  *               model is the curve fitted to it, from src/lib/model/buildSeasonModel.js; 'normal' without one
+ *               older puts the season in the header's "Older Seasons" menu; without it the season has a tab of its own
  *   Datapoint   { id?, rank? | sr?, betterThan, weight?, note? }   betterThan is 0–100
  *   Submission  { id, seasonId, rank, sr, betterThan, proofPath, status, createdAt, reviewedAt }
  *               sr is null for a submission that only names a rank; approving one with an sr makes an exact-SR datapoint

@@ -38,6 +38,8 @@ export function readRank(text, ladder) {
   let best = null;
   for (const [, letters, digit] of squeezed.matchAll(/([A-Z]{3,})([0-9])(?![0-9])/g)) {
     const number = Number(digit);
+    /** The rank these letters spell. */
+    let spelt = null;
     for (const tier of ladder.tiers) {
       if (!tier.divisions.some((division) => division.number === number)) continue;
       const name = tier.name.toUpperCase();
@@ -46,11 +48,15 @@ export function readRank(text, ladder) {
         if (length > letters.length) continue;
         const off = editDistance(letters.slice(-length), name);
         if (off > lettersOff(name)) continue;
-        // Fewest wrong letters wins; between equals the longer name does ("Grandmaster" over "Master").
-        if (!best || off < best.off || (off === best.off && name.length > best.tier.name.length)) {
-          best = { tier, number, off };
-        }
+        // The longest name the letters end with is the one that was written: a misread "GRANOMASTER"
+        // ends with a flawless "MASTER", but it is Grandmaster. Between names of one length, fewest wrong letters.
+        const longer = spelt && name.length - spelt.tier.name.length;
+        if (!spelt || longer > 0 || (longer === 0 && off < spelt.off)) spelt = { tier, number, off };
       }
+    }
+    // Of several ranks in one text, the one read most cleanly; between equals, the longer name.
+    if (spelt && (!best || spelt.off < best.off || (spelt.off === best.off && spelt.tier.name.length > best.tier.name.length))) {
+      best = spelt;
     }
   }
   return best;
@@ -134,9 +140,4 @@ export function settle(readings) {
     }
   }
   return { value: best, agreed: most >= 2 };
-}
-
-/** The SR a player `progress` percent of the way through a division sits at. */
-export function srAt(division, progress) {
-  return Math.round(division.minSr + ((division.maxSr - division.minSr) * progress) / 100);
 }

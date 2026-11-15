@@ -1,9 +1,10 @@
 <!--
-  Every datapoint behind a season's curve: edit, add or delete them and
-  watch how well the fitted curve agrees with each one.
+  Every datapoint behind a season's curve, as a grid of rank badges: open
+  one to edit or delete it, or the last tile to add one, and watch how well
+  the fitted curve agrees with each.
 -->
 <script>
-  import DatapointRow from '@/components/admin/DatapointRow.svelte';
+  import DatapointTile from '@/components/admin/DatapointTile.svelte';
   import Select from '@/components/Select.svelte';
   import { srOf } from '@/lib/admin.js';
   import { formatSr } from '@/lib/format.js';
@@ -54,21 +55,15 @@
   {/if}
 </div>
 
-<div class="table">
-  <div class="head eyebrow">
-    <span>Rank or SR</span>
-    <span>Better than</span>
-    <span>Weight</span>
-    <span>Note</span>
-    <span class="right">Curve says</span>
-    <span></span>
-  </div>
+<p class="hint">Each badge is a datapoint, lowest rank first. Open one to see and edit it; the last tile adds one.</p>
 
+<!-- Closed tiles pack into rows; an open one takes a row to itself (see DatapointTile). -->
+<div class="points">
   {#each points as point (point.id ?? `${point.rank ?? point.sr}-${point.betterThan}`)}
-    <DatapointRow seasonId={season.id} {ladder} {point} model={fit.model} />
+    <DatapointTile seasonId={season.id} {ladder} {point} model={fit.model} />
   {/each}
 
-  <DatapointRow seasonId={season.id} {ladder} />
+  <DatapointTile seasonId={season.id} {ladder} />
 </div>
 
 <style>
@@ -117,26 +112,15 @@
     color: var(--ice-200);
   }
 
-  .table {
-    --columns: minmax(130px, 1.2fr) 110px 76px minmax(120px, 2fr) 84px 170px;
-    margin-top: 6px;
+  .hint {
+    margin: 12px 0 8px;
+    font-size: 11px;
+    color: var(--ice-400);
   }
 
-  .head {
+  .points {
     display: grid;
-    grid-template-columns: var(--columns);
-    gap: 8px;
-    padding-bottom: 8px;
-    font-size: 10px;
-  }
-
-  .right {
-    text-align: right;
-  }
-
-  @media (max-width: 860px) {
-    .head {
-      display: none;
-    }
+    grid-template-columns: repeat(auto-fill, minmax(54px, 1fr));
+    gap: 5px;
   }
 </style>

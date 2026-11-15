@@ -5,13 +5,28 @@
   It is a native range input underneath, so the keyboard, touch and screen
   readers work as they do anywhere else; only its looks are replaced.
   The colour comes from `--tier` (or `--color`) on an ancestor.
+
+  `format` turns the value into what is written beside the rail and read
+  out, for a slider whose positions stand for something else (divisions run
+  5 to 1 from left to right). `compact` is the smaller size for a dense form.
 -->
 <script>
   import { untrack } from 'svelte';
   import { linear } from 'svelte/easing';
   import { Tween, prefersReducedMotion } from 'svelte/motion';
 
-  let { value = $bindable(0), min = 0, max = 100, step = 1, label, unit = '%', disabled = false, oninput } = $props();
+  let {
+    value = $bindable(0),
+    min = 0,
+    max = 100,
+    step = 1,
+    label,
+    unit = '%',
+    format = (value) => value,
+    compact = false,
+    disabled = false,
+    oninput,
+  } = $props();
 
   /**
    * How the drawn handle travels to the value when it jumps: a click
@@ -55,7 +70,7 @@
 
 <svelte:window onpointerup={release} onpointercancel={release} />
 
-<div class="slider" class:disabled style:--at={drawn.current}>
+<div class="slider" class:compact class:disabled style:--at={drawn.current}>
   <div class="rail">
     <div class="track"><div class="fill"></div></div>
     <!-- Quarter marks under the track. -->
@@ -68,13 +83,14 @@
       {step}
       {disabled}
       aria-label={label}
+      aria-valuetext="{format(value)}{unit}"
       bind:value
       {oninput}
       onpointerdown={() => (pressed = true)}
       onpointermove={() => (dragging = pressed)}
     />
   </div>
-  <output class="display numeric">{value}<small>{unit}</small></output>
+  <output class="display numeric">{format(value)}<small>{unit}</small></output>
 </div>
 
 <style>
@@ -197,5 +213,15 @@
   .disabled input {
     --cursor: default;
     cursor: default;
+  }
+
+  /* Compact: a shorter figure beside the rail, for a row of controls. */
+  .compact {
+    grid-template-columns: minmax(0, 1fr) 40px;
+    gap: 8px;
+  }
+
+  .compact output {
+    font-size: 22px;
   }
 </style>

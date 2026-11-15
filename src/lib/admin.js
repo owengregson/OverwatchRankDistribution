@@ -19,23 +19,10 @@ export async function runAdminAction(action, successMessage) {
 }
 
 /**
- * Reads what an admin typed in a datapoint's "where" box: a rank name
- * ("Master 3") or an exact SR ("3700"). `ladder` is the ladder of the
- * season the datapoint belongs to (`app.ladderOf(season)`), since a rank
- * only means something on its own ladder.
- * @returns {{ rank: string } | { sr: number }}, or throws with a readable message
+ * The SR a datapoint or submission refers to on its season's `ladder`
+ * (`app.ladderOf(season)`: a rank only means something on its own ladder),
+ * or null if its rank is not on that ladder.
  */
-export function parseWhere(text, ladder) {
-  const value = String(text).trim();
-  if (/^\d+$/.test(value)) {
-    const sr = Number(value);
-    if (sr > ladder.maxSr) throw new Error(`SR must be between 0 and ${ladder.maxSr}.`);
-    return { sr };
-  }
-  return { rank: ladder.parseRank(value).name };
-}
-
-/** The SR a datapoint or submission refers to on its season's `ladder`, or null if its rank is not on that ladder. */
 export function srOf({ rank, sr }, ladder) {
   if (sr !== undefined && sr !== null) return sr;
   try {

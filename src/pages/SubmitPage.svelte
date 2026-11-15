@@ -20,8 +20,10 @@
   import { formatSr } from '@/lib/format.js';
   import { dissolve, pop, slide } from '@/lib/motion.js';
   import { href } from '@/lib/router.svelte.js';
-  import { srAt } from '@/lib/screenshot/parse.js';
+  import { MAX_PROGRESS, srAt } from '@/lib/ladder/progress.js';
+  import { prepareToRead, readRankScreen, stopReading } from '@/lib/screenshot/readRankScreen.js';
   import { app } from '@/lib/state/app.svelte.js';
+  import { intro } from '@/lib/state/intro.svelte.js';
 
   const STEPS = [
     { title: 'Submit', text: 'Add a screenshot of your rank screen. The rank and percentages are read from it for you to check.' },
@@ -43,7 +45,7 @@
   let seasonId = $state(app.seasonId);
   let tierId = $state(STARTING_TIER);
   let number = $state(3);
-  /** How far through the division, 0 to 100: the game's "Rank progress". */
+  /** How far through the division, 0 to 99: the game's "Rank progress". */
   let progress = $state(STARTING_PROGRESS);
   /** Number inputs bind to a number, or nothing when empty. */
   let betterThan = $state(null);
@@ -64,8 +66,6 @@
   let flags = $state({});
   /** Counts readings, so one that finishes after its image was replaced or removed is ignored. */
   let readRun = 0;
-  /** Shuts the reader down; set once it has been loaded. */
-  let stopReader = null;
 
   let errors = $state({});
   let sending = $state(false);
@@ -127,18 +127,15 @@
     reading = 'reading';
     let result = null;
     try {
-      // The reader is large, so it is only loaded once there is something to read.
-      const reader = await import('@/lib/screenshot/readRankScreen.js');
-      stopReader = reader.stopReading;
       let timer;
       const timeout = new Promise((_, reject) => {
         timer = setTimeout(() => reject(new Error('Reading the screenshot took too long.')), READ_TIMEOUT);
       });
-      result = await Promise.race([reader.readRankScreen(file, app.ladderOf(season)), timeout]).finally(() => clearTimeout(timer));
+      result = await Promise.race([readRankScreen(file, app.ladderOf(season)), timeout]).finally(() => clearTimeout(timer));
     } catch (error) {
-      // Not fatal: the details can always be filled in by hand. A reader that hung is shut down.
+      // Not fatal: the details can always be filled in by hand. A reader that hung is shut down; the next screenshot starts it again.
       console.warn('Could not read the screenshot.', error);
-      stopReader?.();
+      stopReading();
     }
     if (run !== readRun) return;
 
@@ -149,7 +146,7 @@
       found.push('rank');
     }
     if (typeof result?.progress === 'number') {
-      progress = result.progress;
+      progress = Math.min(MAX_PROGRESS, result.progress);
       found.push('progress');
     }
     if (typeof result?.betterThan === 'number') {
@@ -172,7 +169,47 @@
   /** The visitor has dealt with a detail: it no longer needs marking. */
   const settled = (field) => delete flags[field];
 
-  onDestroy(() => stopReader?.());
+  // The reader's files are downloaded in the background on every page (main.js).
+  // Here it is started from them as soon as the page is shown, so it is running
+  // before a screenshot has been chosen. It is shut down when the page is left.
+  $effect(() => {
+    if (intro.opened) prepareToRead();
+  });
+
+  // The whole page is lit in the colour of the rank on the form: the backdrop's
+  // glow as well as the form's own accents (see `featuredTier` in the app state).
+  $effect.pre(() => {
+    app.featuredTier = tier;
+  });
+
+  /**
+   * The admin card under the steps is out of sight until asked for. Resting
+   * the pointer on its place, without moving, for ADMIN_SHOWS_AFTER brings
+   * it up, and it stays while the pointer (or the keyboard) is on it. Once
+   * that has left, it goes again after ADMIN_HIDES_AFTER.
+   */
+  const ADMIN_SHOWS_AFTER = 1000;
+  const ADMIN_HIDES_AFTER = 5000;
+  let adminShown = $state(false);
+  let adminTimer;
+
+  /** The pointer has come onto the card's place, or moved on it. */
+  function restOnAdmin() {
+    clearTimeout(adminTimer);
+    if (!adminShown) adminTimer = setTimeout(() => (adminShown = true), ADMIN_SHOWS_AFTER);
+  }
+
+  /** The pointer, or the keyboard, has left the card. */
+  function leaveAdmin() {
+    clearTimeout(adminTimer);
+    if (adminShown) adminTimer = setTimeout(() => (adminShown = false), ADMIN_HIDES_AFTER);
+  }
+
+  onDestroy(() => {
+    stopReading();
+    app.featuredTier = null;
+    clearTimeout(adminTimer);
+  });
 
   function validate() {
     const found = {};
@@ -216,7 +253,7 @@
   }
 </script>
 
-<main style:--tier={tier.color}>
+<main>
   <section class="panel card rise" aria-labelledby="submit-title">
     <div class="bar"></div>
     <p class="eyebrow">Help sharpen the curve</p>
@@ -301,7 +338,7 @@
               </span>
               <span class="numeric">{rankName} at {progress}% is {formatSr(sr)} SR</span>
             </span>
-            <Slider bind:value={progress} label="Rank progress, percent" oninput={() => settled('progress')} />
+            <Slider bind:value={progress} max={MAX_PROGRESS} label="Rank progress, percent" oninput={() => settled('progress')} />
           </div>
 
           <label class="field" class:flagged={flags.betterThan}>
@@ -391,6 +428,38 @@
         </li>
       {/each}
     </ol>
+
+    <!--
+      The way in for whoever reviews the submissions: the admin panel asks
+      them to sign in. The card is there but out of sight until the pointer
+      rests on its place (see restOnAdmin), and nothing in it can be pressed,
+      reached with the keyboard or read out before then.
+    -->
+    <section
+      class="panel admin rise"
+      class:shown={adminShown}
+      style:--i={STEPS.length + 2}
+      aria-label="Admin"
+      aria-hidden={!adminShown}
+      onpointerenter={restOnAdmin}
+      onpointermove={restOnAdmin}
+      onpointerdown={restOnAdmin}
+      onpointerleave={leaveAdmin}
+      onfocusin={() => clearTimeout(adminTimer)}
+      onfocusout={leaveAdmin}
+    >
+      <div class="admin-card" inert={!adminShown}>
+        <svg class="lock" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 10V7a5 5 0 0 1 10 0v3" />
+          <path d="M5 10h14v10H5z" />
+        </svg>
+        <div>
+          <h3 class="display">Admin</h3>
+          <p>Sign in to review submissions and manage the seasons.</p>
+        </div>
+        <a class="btn small" href={href('admin')}>Admin login</a>
+      </div>
+    </section>
   </aside>
 </main>
 
@@ -403,14 +472,19 @@
     gap: var(--gutter);
     width: min(1120px, 100%);
     margin-inline: auto;
-    padding: calc(var(--gutter) * 1.6) var(--gutter) var(--gutter);
-    transition: --tier 380ms var(--ease-out);
+    padding: var(--gutter);
   }
 
+  /*
+   * The spacing down the card is kept tight. With the header and footer the
+   * page is just under 900px tall on a wide screen, so it fits a maximised
+   * browser window on a 1080p display (about 910px once the browser's own
+   * bars are taken off) with nothing to scroll.
+   */
   .card {
     display: grid;
-    gap: 14px;
-    padding: 28px 30px 30px;
+    gap: 12px;
+    padding: 24px 30px;
   }
 
   .bar {
@@ -421,7 +495,7 @@
   }
 
   h1 {
-    font-size: clamp(44px, 5vw, 68px);
+    font-size: clamp(44px, 5vw, 60px);
     font-style: italic;
   }
 
@@ -439,8 +513,7 @@
 
   form {
     display: grid;
-    gap: 14px;
-    margin-top: 4px;
+    gap: 12px;
   }
 
   /* A field with its label and control side by side. */
@@ -469,7 +542,7 @@
 
   .details {
     display: grid;
-    gap: 14px;
+    gap: 12px;
     transition: opacity 240ms;
   }
 
@@ -742,12 +815,18 @@
     list-style: none;
   }
 
-  .steps li {
-    --cut: 10px;
+  /* The admin card is one more of the step cards, with a lock where their number is and a button at the end. */
+  .steps li,
+  .admin-card {
     display: flex;
     align-items: center;
     gap: 16px;
     padding: 14px 20px;
+  }
+
+  .steps li,
+  .admin {
+    --cut: 10px;
   }
 
   .index {
@@ -755,14 +834,49 @@
     color: var(--orange);
   }
 
-  .steps h3 {
+  .steps h3,
+  .admin h3 {
     font-size: 24px;
   }
 
-  .steps p {
+  .steps p,
+  .admin p {
     font-size: 12px;
     color: var(--ice-300);
     text-wrap: pretty;
+  }
+
+  /*
+   * The cards sit 10px apart; the aside's own gap is wider.
+   *
+   * Out of sight until the pointer has rested on it (`shown`): it keeps its
+   * place, and while it cannot be seen the cursor over it stays the plain
+   * arrow, as over any empty part of the page.
+   */
+  .admin {
+    --cursor: default;
+    cursor: default;
+    margin-top: calc(10px - var(--gutter));
+    opacity: 0;
+    transition: opacity 500ms var(--ease-out);
+  }
+
+  .admin.shown {
+    opacity: 1;
+  }
+
+  .admin .btn {
+    flex: none;
+    margin-left: auto;
+  }
+
+  .lock {
+    flex: none;
+    width: 26px;
+    height: 44px;
+    fill: none;
+    stroke: var(--orange);
+    stroke-width: 2;
   }
 
   @media (max-width: 860px) {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ladderById } from '../src/lib/ladder/ladders.js';
+import { MAX_PROGRESS, progressAt, srAt } from '../src/lib/ladder/progress.js';
 import {
   editDistance,
   parseRankScreen,
@@ -8,7 +9,6 @@ import {
   readProgress,
   readRank,
   settle,
-  srAt,
 } from '../src/lib/screenshot/parse.js';
 
 const ladder = ladderById();
@@ -54,6 +54,18 @@ describe('reading a rank', () => {
     expect(rank('GRANDMASTER 2')).toBe('Grandmaster 2');
     expect(rank('GRAND MASTER 2')).toBe('Grandmaster 2');
     expect(rank('MASTER 2')).toBe('Master 2');
+  });
+
+  it('reads a Grandmaster with a misread letter as Grandmaster, not as the Master it ends with', () => {
+    // What the text reader makes of the game's slanted "GRANDMASTER 2".
+    expect(rank('GRANOMASTER 2')).toBe('Grandmaster 2');
+    expect(readRank('GRANOMASTER 2', ladder).off).toBe(1);
+    expect(rank('CRAND MASTER 2')).toBe('Grandmaster 2');
+    expect(rank('RANDMASTER 2')).toBe('Grandmaster 2');
+    expect(rank('GRANDMASTFR 2')).toBe('Grandmaster 2');
+    // Clutter in front of a Master does not make it a Grandmaster.
+    expect(rank('N77 MASTER 2')).toBe('Master 2');
+    expect(rank('TANK MASTER 2')).toBe('Master 2');
   });
 
   it('needs a division from 1 to 5, and is not fooled by other numbers on the screen', () => {
@@ -180,5 +192,19 @@ describe('rank progress as SR', () => {
   it('follows the width of the division, which is wider in Bronze', () => {
     expect(srAt(ladder.parseRank('Bronze 5'), 50)).toBe(100);
     expect(srAt(classic.parseRank('Bronze 1'), 50)).toBe(1350);
+  });
+
+  it('reads the progress back off an SR', () => {
+    expect(progressAt(ladder.parseRank('Champion 4'), 4659)).toBe(59);
+    expect(progressAt(ladder.parseRank('Champion 4'), 4600)).toBe(0);
+    expect(progressAt(ladder.parseRank('Bronze 5'), 100)).toBe(50);
+    for (const progress of [0, 1, 37, MAX_PROGRESS]) {
+      const division = ladder.parseRank('Master 3');
+      expect(progressAt(division, srAt(division, progress))).toBe(progress);
+    }
+  });
+
+  it('never reads more progress than a division has: the very top of the ladder is 99%', () => {
+    expect(progressAt(ladder.parseRank('Champion 1'), 5000)).toBe(MAX_PROGRESS);
   });
 });

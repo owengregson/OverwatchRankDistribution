@@ -41,7 +41,7 @@
     <aside class="side">
       <div class="rise" style:--i={1}><ReadoutPanel /></div>
       <div class="rise" style:--i={2}><FinderPanel /></div>
-      <div class="rise" style:--i={3}><ComparePanel /></div>
+      <div class="rise gives" style:--i={3}><ComparePanel /></div>
     </aside>
   </main>
 {/if}
@@ -130,11 +130,29 @@
     min-width: 0;
   }
 
-  /* Wide screens: the chart takes the height left over; the side panels scroll if they cannot fit. */
+  /*
+   * Wide screens: the chart takes the height left over, and the side column
+   * ends where the chart card does. The readout and the finder keep their
+   * height. The compare card gives way: it is handed what is left, and
+   * shows as many of its extra lines as fit there (see ComparePanel), so it
+   * never runs past the bottom of the chart card. Only when even its
+   * essentials do not fit does the column scroll.
+   */
   @media (min-width: 1041px) {
     .side {
       overflow-y: auto;
       scrollbar-width: none;
+    }
+
+    .side > div {
+      flex: none;
+    }
+
+    .side > .gives {
+      display: flex;
+      flex: 0 1 auto;
+      flex-direction: column;
+      min-height: 0;
     }
   }
 

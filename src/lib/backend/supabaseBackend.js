@@ -40,6 +40,7 @@ export function createSupabaseBackend({ url, anonKey }) {
     name: row.name,
     model: row.model,
     ladder: row.ladder,
+    older: Boolean(row.older),
     datapoints: (row.datapoints ?? []).map(toDatapoint),
   });
 
@@ -68,10 +69,10 @@ export function createSupabaseBackend({ url, anonKey }) {
 
     async listSeasons() {
       const client = await getClient();
+      // Every column of a season, not a list of them: a database that has not yet been given
+      // a newer column (run supabase/schema.sql again) still loads, without that field.
       const rows = unwrap(
-        await client
-          .from('seasons')
-          .select('id, year, number, name, model, ladder, datapoints(id, rank, sr, better_than, weight, note)'),
+        await client.from('seasons').select('*, datapoints(id, rank, sr, better_than, weight, note)'),
       );
       return rows.map(toSeason);
     },
@@ -176,7 +177,14 @@ export function createSupabaseBackend({ url, anonKey }) {
 
     async saveSeason(season, isNew) {
       const client = await getClient();
-      const row = { year: season.year, number: season.number, name: season.name, ladder: season.ladder, model: season.model };
+      const row = {
+        year: season.year,
+        number: season.number,
+        name: season.name,
+        ladder: season.ladder,
+        model: season.model,
+        older: Boolean(season.older),
+      };
       const table = client.from('seasons');
       unwrap(await (isNew ? table.insert({ id: season.id, ...row }) : table.update(row).eq('id', season.id)));
     },

@@ -5,6 +5,7 @@
   "name": "Season 12",
   "model": "freeform",
   "ladder": "classic",
+  "older": true,
   "datapoints": [
     { "rank": "Silver 5", "betterThan": 4.6, "note": "Season 12 tier cut-offs" },
     { "rank": "Gold 5", "betterThan": 24.8, "note": "Season 12 tier cut-offs" },

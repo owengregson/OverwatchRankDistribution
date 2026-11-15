@@ -1,6 +1,6 @@
 <!--
   Admin panel: review submissions and manage every datapoint and season
-  behind the curves. Reached at /#/admin; nothing links to it publicly.
+  behind the curves. Reached at /#/admin, which the submit page links to.
 
   What an admin may do is enforced by the backend. This page only decides
   what to show.

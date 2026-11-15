@@ -5,6 +5,7 @@
   "name": "Season 17",
   "model": "freeform",
   "ladder": "classic",
+  "older": true,
   "datapoints": [
     { "rank": "Silver 5", "betterThan": 2.4, "note": "Official Season 17 graph" },
     { "rank": "Gold 5", "betterThan": 15, "note": "Official Season 17 graph" },
