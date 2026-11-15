@@ -22,8 +22,13 @@ create table if not exists public.seasons (
   number      int  not null,
   name        text not null check (char_length(name) between 1 and 60),
   model       text not null default 'normal',
+  -- Which ladder the season was played on: an id from src/data/ladder.js.
+  ladder      text not null default 'emerald',
   created_at  timestamptz not null default now()
 );
+
+-- For a database made before seasons had a ladder.
+alter table public.seasons add column if not exists ladder text not null default 'emerald';
 
 create table if not exists public.submissions (
   id           uuid primary key default gen_random_uuid(),

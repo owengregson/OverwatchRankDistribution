@@ -22,6 +22,21 @@
     app.selectSeason(id);
     if (!onHome) router.go('');
   }
+
+  // When there are more season tabs than fit, the strip scrolls sideways
+  // inside the bar. Keep the season on screen's tab in view: on arrival
+  // (the newest season is the last tab) and whenever the season changes.
+  let seasonTabs = $state();
+  $effect(() => {
+    app.seasonId;
+    app.viewableSeasons;
+    const tab = seasonTabs?.querySelector('[aria-current]');
+    if (!tab) return;
+    const strip = seasonTabs.getBoundingClientRect();
+    const box = tab.getBoundingClientRect();
+    if (box.left < strip.left) seasonTabs.scrollLeft -= strip.left - box.left;
+    else if (box.right > strip.right) seasonTabs.scrollLeft += box.right - strip.right;
+  });
 </script>
 
 <header class="nav">
@@ -38,7 +53,7 @@
     <span class="display wordmark">Rank Distribution</span>
   </a>
 
-  <nav class="seasons" aria-label="Season">
+  <nav class="seasons" aria-label="Season" bind:this={seasonTabs}>
     {#each app.viewableSeasons as season (season.id)}
       <button
         type="button"
@@ -100,11 +115,6 @@
     width: 36px;
     height: 36px;
     object-fit: contain;
-    transition: rotate 700ms var(--ease-back);
-  }
-
-  .brand:hover .mark {
-    rotate: 360deg;
   }
 
   .wordmark {
@@ -114,10 +124,30 @@
     white-space: nowrap;
   }
 
+  /*
+   * The season tabs give way when the bar is too narrow for everything:
+   * the strip shrinks and scrolls sideways (no scrollbar; swipe, or it
+   * follows the selected season), so the links and button after it always
+   * stay in the bar.
+   */
   .seasons {
     display: flex;
+    flex: 0 1 auto;
+    min-width: 0;
     height: 100%;
     margin-left: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+  }
+
+  .seasons::-webkit-scrollbar {
+    display: none;
+  }
+
+  .seasons button {
+    flex: none;
   }
 
   .seasons button {

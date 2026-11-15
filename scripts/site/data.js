@@ -6,9 +6,8 @@
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { LADDER_CONFIG } from '../../src/data/ladder.js';
 import { formatOneIn, formatPercent, formatSr } from '../../src/lib/format.js';
-import { createLadder } from '../../src/lib/ladder/createLadder.js';
+import { ladderOf } from '../../src/lib/ladder/ladders.js';
 import { buildSeasonModel } from '../../src/lib/model/buildSeasonModel.js';
 
 const seasonsDir = fileURLToPath(new URL('../../src/data/seasons/', import.meta.url));
@@ -25,18 +24,20 @@ function readSeasons() {
 export const DATA_SOURCES = ['src/data/seasons', 'src/data/ladder.js', 'src/lib/model'];
 
 export function loadSiteData() {
-  const ladder = createLadder(LADDER_CONFIG);
+  // Each season is fitted on the ladder it was played on (`playedOn`), which is not the same for all of them.
   const seasons = readSeasons().flatMap((season) => {
     try {
-      return [{ ...season, model: buildSeasonModel(season, ladder) }];
+      const playedOn = ladderOf(season);
+      return [{ ...season, playedOn, model: buildSeasonModel(season, playedOn) }];
     } catch {
       return []; // A season that cannot be fitted yet is hidden, as on the site.
     }
   });
   if (!seasons.length) throw new Error('No season in src/data/seasons can be fitted.');
 
+  // Everything below describes the newest season, on its ladder.
   const season = seasons.at(-1);
-  const { model } = season;
+  const { model, playedOn: ladder } = season;
 
   const describeDivision = (division) => ({
     ...division,

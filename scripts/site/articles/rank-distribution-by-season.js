@@ -9,16 +9,20 @@ export default {
   section: 'Rank distribution',
   related: ['overwatch-rank-distribution', 'how-the-estimate-works', 'average-rank', 'faq'],
   body: (d, h) => {
+    // Each season is read on the ladder it was played on.
     const rows = d.seasons.map((s) => {
-      const shares = tierShares(s.model, d.ladder);
-      const top = (id) => 1 - s.model.cdf(d.ladder.tiers.find((t) => t.id === id).minSr);
-      const median = readAt(s.model, d.ladder, s.model.quantile(0.5));
+      const shares = tierShares(s.model, s.playedOn);
+      const top = (id) => 1 - s.model.cdf(s.playedOn.tiers.find((t) => t.id === id).minSr);
+      const median = readAt(s.model, s.playedOn, s.model.quantile(0.5));
       const common = [...shares].sort((a, b) => b.share - a.share)[0];
       return { s, median, common, top };
     });
     const single = d.seasons.length === 1;
     const first = rows[0];
     const last = rows.at(-1);
+    /** Whether the seasons listed were played on more than one ladder (Emerald was added part-way through). */
+    const ladderChanged = d.seasons.some((s) => s.playedOn !== d.ladder);
+    const hasEmerald = (s) => s.playedOn.tiers.some((t) => t.id === 'emerald');
     return `
 <p>Each competitive season has its own rank distribution, and this site fits a separate curve for every season it has data for. This page lists them side by side: where the median player sits, which tier is the most crowded, and how many players reach Diamond, Master and Grandmaster. ${single ? `So far the site has a fitted curve for one season, ${d.season.name}; this page will grow as more seasons are added.` : `The site currently has ${d.seasons.length} fitted seasons, from ${d.seasons[0].name} to ${d.season.name}.`} To switch between seasons yourself, use the season tabs on ${h.chart('the interactive rank distribution chart')}.</p>
 
@@ -27,20 +31,20 @@ ${h.estimateNote()}
 <h2>Season by season</h2>
 <div class="table-wrap panel"><table>
   <caption>Estimated rank distribution for each season</caption>
-  <thead><tr><th scope="col">Season</th><th scope="col">Datapoints</th><th scope="col">Median rank</th><th scope="col">Most common tier</th><th scope="col">Diamond or higher</th><th scope="col">Master or higher</th><th scope="col">Grandmaster or higher</th></tr></thead>
+  <thead><tr><th scope="col">Season</th><th scope="col">Datapoints</th><th scope="col">Ladder</th><th scope="col">Median rank</th><th scope="col">Most common tier</th><th scope="col">Diamond or higher</th><th scope="col">Master or higher</th><th scope="col">Grandmaster or higher</th></tr></thead>
   <tbody>
 ${[...rows]
   .reverse()
   .map(
     ({ s, median, common, top }) =>
-      `    <tr><th scope="row">${s.name}</th><td>${s.model.points.length}</td><td>${median.division.name}</td><td>${common.tier.name} (${d.pct(common.share)})</td><td>${d.pct(top('diamond'))}</td><td>${d.pct(top('master'))}</td><td>${d.pct(top('grandmaster'))}</td></tr>`,
+      `    <tr><th scope="row">${s.name}</th><td>${s.model.points.length}</td><td>${hasEmerald(s) ? 'With Emerald' : 'Before Emerald'}</td><td>${median.division.name}</td><td>${common.tier.name} (${d.pct(common.share)})</td><td>${d.pct(top('diamond'))}</td><td>${d.pct(top('master'))}</td><td>${d.pct(top('grandmaster'))}</td></tr>`,
   )
   .join('\n')}
   </tbody>
 </table></div>
 
 <h2>Reading the season table</h2>
-<p>Each column answers a question players ask about a season. <strong>Datapoints</strong> is how many approved observations the curve was fitted to; it is the first thing to check, because it says how much evidence sits behind the rest of the row. <strong>Median rank</strong> is the division of the player exactly in the middle. <strong>Most common tier</strong> is the tier with the largest share of players, with that share in brackets. The last three columns are cumulative: the share of players at or above the first division of Diamond, Master and Grandmaster.</p>
+<p>Each column answers a question players ask about a season. <strong>Datapoints</strong> is how many approved observations the curve was fitted to; it is the first thing to check, because it says how much evidence sits behind the rest of the row. <strong>Ladder</strong> says whether the season was played before or after the Emerald tier was added between Platinum and Diamond. <strong>Median rank</strong> is the division of the player exactly in the middle. <strong>Most common tier</strong> is the tier with the largest share of players, with that share in brackets. The last three columns are cumulative: the share of players at or above the first division of Diamond, Master and Grandmaster.</p>
 <p>Cumulative shares are the most practical way to compare seasons, because they do not depend on how the middle of the ladder is split. If "Master or higher" grows from one season to the next, it is easier to reach the top tiers that season, whatever happened to the tiers below.</p>
 <p>For any single rank, the most direct comparison is its percentile in each season: the share of players that rank was better than. The season tabs on the chart switch the whole curve, so you can pin a rank, change season and watch its percentile move.</p>
 
@@ -59,7 +63,7 @@ ${h.tierBars({
 })}
 
 ${single ? '' : `<h2>What changed between seasons</h2>
-<p>From ${first.s.name} to ${last.s.name}, the median moved from ${first.median.division.name} to ${last.median.division.name}, and the share of players at Master or higher went from ${d.pct(first.top('master'))} to ${d.pct(last.top('master'))}. Remember that each season is fitted from its own datapoints, so some of the difference between seasons comes from which ranks people happened to report, not only from real changes in the player base.</p>`}
+<p>From ${first.s.name} to ${last.s.name}, the median moved from ${first.median.division.name} to ${last.median.division.name}, and the share of players at Master or higher went from ${d.pct(first.top('master'))} to ${d.pct(last.top('master'))}. Remember that each season is fitted from its own datapoints, so some of the difference between seasons comes from which ranks people happened to report, not only from real changes in the player base.${ladderChanged ? ' The ladder itself also changed over these seasons: Emerald was added between Platinum and Diamond, so a median rank from before that change and one from after it are not on the same set of tiers.' : ''}</p>`}
 
 <h2>Why the distribution changes from season to season</h2>
 <p>Several things can move the curve between one season and the next:</p>
@@ -76,7 +80,7 @@ ${single ? '' : `<h2>What changed between seasons</h2>
 
 <h2>Comparing seasons fairly</h2>
 <p>When you compare seasons, look at the number of datapoints behind each one first. Two seasons fitted from a handful of points each can differ simply because of which ranks were reported. Differences in the middle of the ladder are usually more trustworthy than differences in the far tail, where Grandmaster and Champion figures depend heavily on the shape of the curve. The ${h.a('how-the-estimate-works', 'methodology page')} explains why.</p>
-<p>It also helps to compare like with like. A percentile for "Master 3" means the same thing in every season on this site, because the ladder positions are the same. The ${h.a('rank-percentages', 'rank percentages page')} has the full table for the current season, and the ${h.a('faq', 'FAQ')} answers common questions about the data.</p>
+<p>It also helps to compare like with like. ${ladderChanged ? 'Diamond, Master, Grandmaster and Champion sit in the same place on the ladder in every season on this site, so a percentile for "Master 3" can be compared across all of them. The tiers below Diamond cannot be compared so directly across the Emerald change: before it, Bronze to Platinum covered the stretch of ladder that Bronze to Emerald covers now, so a rank such as Platinum 3 was a higher position then than it is today.' : 'A percentile for "Master 3" means the same thing in every season on this site, because the ladder positions are the same.'} The ${h.a('rank-percentages', 'rank percentages page')} has the full table for the current season, and the ${h.a('faq', 'FAQ')} answers common questions about the data.</p>
 
 ${h.cta('Use the season tabs on the chart to switch seasons and see how the curve and your rank\'s percentile change.')}
 `;

@@ -6,13 +6,17 @@
   import DatapointRow from '@/components/admin/DatapointRow.svelte';
   import { srOf } from '@/lib/admin.js';
   import { formatSr } from '@/lib/format.js';
-  import { app, ladder } from '@/lib/state/app.svelte.js';
+  import { app } from '@/lib/state/app.svelte.js';
 
   let seasonId = $state(app.seasonId);
 
   const season = $derived(app.seasons.find((s) => s.id === seasonId) ?? app.season);
+  /** Ranks here are read on the chosen season's ladder, which may not be the one on the chart. */
+  const ladder = $derived(app.ladderOf(season));
   const fit = $derived(app.fitOf(season));
-  const points = $derived([...season.datapoints].sort((a, b) => (srOf(a) ?? 0) - (srOf(b) ?? 0)));
+  const points = $derived(
+    [...season.datapoints].sort((a, b) => (srOf(a, ladder) ?? 0) - (srOf(b, ladder) ?? 0)),
+  );
   const median = $derived(fit.model?.quantile(0.5));
 </script>
 
@@ -64,10 +68,10 @@
   </div>
 
   {#each points as point (point.id ?? `${point.rank ?? point.sr}-${point.betterThan}`)}
-    <DatapointRow seasonId={season.id} {point} model={fit.model} />
+    <DatapointRow seasonId={season.id} {ladder} {point} model={fit.model} />
   {/each}
 
-  <DatapointRow seasonId={season.id} />
+  <DatapointRow seasonId={season.id} {ladder} />
 </div>
 
 <style>

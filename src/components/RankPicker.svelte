@@ -2,17 +2,20 @@
   Pick a rank: a row of tier icons and a row of divisions.
   Controlled: the parent passes the selected `tier` and division `number`
   and decides what to do when `onpick(tier, number)` fires.
+
+  The tiers offered are those of the season on screen, unless the parent
+  passes `tiers` from another season's ladder.
 -->
 <script>
   import RankBadge from '@/components/RankBadge.svelte';
   import { ladder } from '@/lib/state/app.svelte.js';
 
-  let { tier, number, onpick, iconSize = 30 } = $props();
+  let { tier, number, onpick, iconSize = 30, tiers = null } = $props();
 </script>
 
 <div class="rank-picker" style:--color={tier.color}>
   <div class="tiers" role="group" aria-label="Tier">
-    {#each ladder.tiers as option (option.id)}
+    {#each tiers ?? ladder.tiers as option (option.id)}
       <button
         type="button"
         class="tier"

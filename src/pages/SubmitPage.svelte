@@ -10,7 +10,7 @@
   import { backend } from '@/lib/backend/index.js';
   import { pop, slide } from '@/lib/motion.js';
   import { href } from '@/lib/router.svelte.js';
-  import { app, ladder } from '@/lib/state/app.svelte.js';
+  import { app } from '@/lib/state/app.svelte.js';
 
   const STEPS = [
     { title: 'Submit', text: 'Pick the rank, enter the percentage the game shows, and attach a screenshot.' },
@@ -18,8 +18,11 @@
     { title: 'Refit', text: 'Once approved, the curve is refitted with your datapoint included.' },
   ];
 
+  /** The tier the form starts on, and falls back to if the chosen season's ladder lacks the one picked. */
+  const STARTING_TIER = 'gold';
+
   let seasonId = $state(app.seasonId);
-  let tier = $state(ladder.tiers.find((t) => t.id === 'gold'));
+  let tierId = $state(STARTING_TIER);
   let number = $state(3);
   /** Number inputs bind to a number, or nothing when empty. */
   let betterThan = $state(null);
@@ -33,6 +36,9 @@
   let form = $state();
 
   const season = $derived(app.seasons.find((s) => s.id === seasonId) ?? app.season);
+  // The ranks on offer are those of the chosen season's ladder, which may not be the one on the chart.
+  const tiers = $derived(app.ladderOf(season).tiers);
+  const tier = $derived(tiers.find((t) => t.id === tierId) ?? tiers.find((t) => t.id === STARTING_TIER));
   const rankName = $derived(`${tier.name} ${number}`);
   const hasPercent = $derived(typeof betterThan === 'number' && betterThan > 0 && betterThan < 100);
 
@@ -118,7 +124,7 @@
 
         <div class="field">
           <span class="label">Rank</span>
-          <RankPicker {tier} {number} iconSize={42} onpick={(t, n) => ((tier = t), (number = n))} />
+          <RankPicker {tier} {number} {tiers} iconSize={42} onpick={(t, n) => ((tierId = t.id), (number = n))} />
         </div>
 
         <label class="field">

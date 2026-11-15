@@ -1,0 +1,15 @@
+{
+  "id": "2024-season-12",
+  "year": 2024,
+  "number": 12,
+  "name": "Season 12",
+  "model": "normal",
+  "ladder": "classic",
+  "datapoints": [
+    { "rank": "Silver 5", "betterThan": 4.7, "note": "Season 12 tier cut-offs" },
+    { "rank": "Gold 5", "betterThan": 24.8, "note": "Season 12 tier cut-offs" },
+    { "rank": "Platinum 5", "betterThan": 61.5, "note": "Season 12 tier cut-offs" },
+    { "rank": "Diamond 5", "betterThan": 88.4, "note": "Season 12 tier cut-offs" },
+    { "rank": "Master 5", "betterThan": 97.79, "weight": 0.5, "note": "Season 12 tier cut-offs; half weight, the top tiers sit above a bell curve" }
+  ]
+}

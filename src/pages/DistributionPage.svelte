@@ -32,7 +32,10 @@
         </ul>
       </header>
 
-      <DistributionChart />
+      <!-- A season on a different ladder gets a fresh chart: its axis, tiers and colours all change, and the curve draws itself again. -->
+      {#key app.ladder}
+        <DistributionChart />
+      {/key}
     </section>
 
     <aside class="side">

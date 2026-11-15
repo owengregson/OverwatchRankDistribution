@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import iconMetrics from '../src/data/iconMetrics.json';
 import { LADDER_CONFIG } from '../src/data/ladder.js';
+import season12 from '../src/data/seasons/2024-season-12.json';
+import season17 from '../src/data/seasons/2025-season-17.json';
+import season4 from '../src/data/seasons/2026-season-4.json';
 import season from '../src/data/seasons/2026-season-5.json';
 import { createLadder } from '../src/lib/ladder/createLadder.js';
 import { createIconSizing } from '../src/lib/ladder/iconSizing.js';
+import { ladderById, ladderOf } from '../src/lib/ladder/ladders.js';
 import { cdf, probit } from '../src/lib/math/normal.js';
 import { buildSeasonModel, tryBuildSeasonModel } from '../src/lib/model/buildSeasonModel.js';
 import { compareReadings, readAt, tierShares } from '../src/lib/model/reading.js';
@@ -119,6 +123,92 @@ describe('season model', () => {
     expect(build([{ rank: 'Master 3', betterThan: 100 }, { rank: 'Master 2', betterThan: 98 }])).toThrow(/betterThan/);
     expect(build([{ betterThan: 50 }, { rank: 'Master 2', betterThan: 98 }])).toThrow(/exactly one/);
     expect(build(season.datapoints, { model: 'cubic' })).toThrow(/Unknown model/);
+  });
+});
+
+describe('2026 Season 4', () => {
+  // Its datapoints were read off a community graph of the season. These are
+  // that graph's shares of players per tier, in percent, Bronze first; the
+  // fitted curve should give them back.
+  const GRAPH_TIER_SHARES = [4.9, 11.1, 21.2, 26.1, 20.9, 11.1, 3.7, 0.8];
+  const model = buildSeasonModel(season4, ladder);
+
+  it('reproduces the tier shares of the graph it was taken from', () => {
+    const fitted = tierShares(model, ladder).map(({ share }) => share * 100);
+    GRAPH_TIER_SHARES.forEach((share, i) => {
+      expect(Math.abs(fitted[i] - share)).toBeLessThan(0.3);
+    });
+  });
+
+  it('agrees closely with every one of its datapoints', () => {
+    expect(model.points).toHaveLength(season4.datapoints.length);
+    expect(model.rmse).toBeLessThan(0.005);
+  });
+
+  it('puts the median in Platinum', () => {
+    expect(ladder.divisionAt(model.quantile(0.5)).tier.id).toBe('platinum');
+  });
+});
+
+describe('ladders', () => {
+  const classic = ladderById('classic');
+
+  it('gives a season the ladder it names, and the current one otherwise', () => {
+    expect(ladderOf(season17)).toBe(classic);
+    expect(ladderOf(season).id).toBe('emerald');
+    expect(ladderOf(season).tiers.map((t) => t.id)).toEqual(ladder.tiers.map((t) => t.id));
+    expect(() => ladderById('ruby')).toThrow(/Unknown ladder/);
+  });
+
+  it('has no Emerald before it was added, and the tiers below Diamond start higher', () => {
+    expect(classic.tiers.map((t) => t.id)).toEqual([
+      'bronze',
+      'silver',
+      'gold',
+      'platinum',
+      'diamond',
+      'master',
+      'grandmaster',
+      'champion',
+    ]);
+    expect(classic.divisions).toHaveLength(40);
+    expect(classic.parseRank('Silver 5').minSr).toBe(1500);
+    expect(classic.parseRank('Platinum 5').minSr).toBe(2500);
+    expect(() => classic.parseRank('Emerald 3')).toThrow(/Unknown rank/);
+  });
+
+  it('keeps Diamond and above where they are today', () => {
+    for (const rank of ['Diamond 5', 'Master 3', 'Grandmaster 1', 'Champion 5']) {
+      expect(classic.parseRank(rank).minSr).toBe(ladder.parseRank(rank).minSr);
+    }
+    expect(classic.maxSr).toBe(ladder.maxSr);
+  });
+});
+
+describe('seasons before Emerald', () => {
+  const classic = ladderById('classic');
+  const sharesOf = (model) => tierShares(model, classic).map(({ share }) => share * 100);
+
+  it('gives back the official Season 17 tier shares to within about a point', () => {
+    // Percent of players per tier on the official graph, Bronze first (Champion is "<0.1%").
+    const OFFICIAL = [2.4, 12.6, 31.7, 34.9, 14.9, 3.2, 0.3];
+    const fitted = sharesOf(buildSeasonModel(season17, ladderOf(season17)));
+    OFFICIAL.forEach((share, i) => expect(Math.abs(fitted[i] - share)).toBeLessThan(1.1));
+    expect(fitted[7]).toBeLessThan(0.1);
+  });
+
+  it('gives back the Season 12 tier shares through the middle of the ladder', () => {
+    // Bronze to Diamond. Its top tiers hold more players than any bell curve allows, so they are not held to this.
+    const PUBLISHED = [4.7, 20.2, 36.7, 26.9, 9.4];
+    const fitted = sharesOf(buildSeasonModel(season12, ladderOf(season12)));
+    PUBLISHED.forEach((share, i) => expect(Math.abs(fitted[i] - share)).toBeLessThan(1.7));
+  });
+
+  it('would be misread on the wrong ladder', () => {
+    // On today's ladder "Silver 5" is 500 SR lower, which drags the whole curve down.
+    const right = buildSeasonModel(season17, classic);
+    const wrong = buildSeasonModel(season17, ladder);
+    expect(right.quantile(0.5) - wrong.quantile(0.5)).toBeGreaterThan(300);
   });
 });
 

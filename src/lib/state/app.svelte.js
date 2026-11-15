@@ -1,18 +1,37 @@
 import { Spring, prefersReducedMotion } from 'svelte/motion';
 import iconMetrics from '@/data/iconMetrics.json';
-import { LADDER_CONFIG } from '@/data/ladder.js';
 import { SEASONS as BUNDLED_SEASONS, sortSeasons } from '@/data/seasons/index.js';
 import { backend } from '@/lib/backend/index.js';
-import { createLadder } from '@/lib/ladder/createLadder.js';
 import { createIconSizing } from '@/lib/ladder/iconSizing.js';
+import { ladderById, ladderOf } from '@/lib/ladder/ladders.js';
 import { clamp } from '@/lib/math/util.js';
 import { tryBuildSeasonModel } from '@/lib/model/buildSeasonModel.js';
 import { compareReadings, readAt } from '@/lib/model/reading.js';
 
-export const ladder = createLadder(LADDER_CONFIG);
+/**
+ * How large to draw each rank icon so they all look the same size. Worked
+ * out from today's ladder, which has every tier, so a rank is drawn the
+ * same size whichever ladder a season uses.
+ */
+export const iconSizing = createIconSizing(ladderById(), iconMetrics);
 
-/** How large to draw each rank icon so they all look the same size. */
-export const iconSizing = createIconSizing(ladder, iconMetrics);
+/** A season's ladder, falling back to today's if the season names one that does not exist. */
+function ladderFor(season) {
+  try {
+    return ladderOf(season);
+  } catch {
+    return ladderById();
+  }
+}
+
+/** Fits a season on its own ladder: { model, error }. A season that cannot be fitted yields the error. */
+function fitSeason(season) {
+  try {
+    return tryBuildSeasonModel(season, ladderOf(season));
+  } catch (error) {
+    return { model: null, error };
+  }
+}
 
 /** Spring feel for the cursor: tight when tracking a pointer, loose when travelling. */
 const FOLLOW = { stiffness: 0.34, damping: 0.92 };
@@ -123,9 +142,9 @@ class AppState {
   seasonId = $state(BUNDLED_SEASONS.at(-1)?.id);
   probe = new Probe();
 
-  // Every season's curve is fitted from its datapoints. A season that
-  // cannot be fitted yields an error instead of breaking the page.
-  #fits = $derived(new Map(this.seasons.map((season) => [season.id, tryBuildSeasonModel(season, ladder)])));
+  // Every season's curve is fitted from its datapoints, on its own ladder.
+  // A season that cannot be fitted yields an error instead of breaking the page.
+  #fits = $derived(new Map(this.seasons.map((season) => [season.id, fitSeason(season)])));
 
   /** Seasons with enough data for a curve: the ones visitors can browse. */
   viewableSeasons = $derived(this.seasons.filter((season) => this.#fits.get(season.id).model));
@@ -134,13 +153,16 @@ class AppState {
     this.seasons.find((season) => season.id === this.seasonId) ?? this.viewableSeasons.at(-1) ?? this.seasons.at(-1),
   );
 
-  reading = $derived(this.model ? readAt(this.model, ladder, this.probe.sr) : null);
+  /** The ladder the season on screen was played on. */
+  ladder = $derived(ladderFor(this.season));
+
+  reading = $derived(this.model ? readAt(this.model, this.ladder, this.probe.sr) : null);
   pinnedReading = $derived(
-    this.model && this.probe.pinnedSr !== null ? readAt(this.model, ladder, this.probe.pinnedSr) : null,
+    this.model && this.probe.pinnedSr !== null ? readAt(this.model, this.ladder, this.probe.pinnedSr) : null,
   );
   /** The far end of the comparison once it is locked. */
   lockedReading = $derived(
-    this.model && this.probe.lockedSr !== null ? readAt(this.model, ladder, this.probe.lockedSr) : null,
+    this.model && this.probe.lockedSr !== null ? readAt(this.model, this.ladder, this.probe.lockedSr) : null,
   );
   /** What the first pin is compared with: the second pin, or the probe until there is one. */
   comparedReading = $derived(this.lockedReading ?? this.reading);
@@ -148,7 +170,12 @@ class AppState {
 
   /** The fit for any season: { model, error }. */
   fitOf(season) {
-    return this.#fits.get(season.id) ?? tryBuildSeasonModel(season, ladder);
+    return this.#fits.get(season.id) ?? fitSeason(season);
+  }
+
+  /** The ladder any season was played on. */
+  ladderOf(season) {
+    return ladderFor(season);
   }
 
   get model() {
@@ -181,5 +208,16 @@ class AppState {
     }
   }
 }
+
+/**
+ * The ladder of the season on screen. It reads through to `app.ladder`, so
+ * `ladder.tiers`, `ladder.divisionAt(sr)` and the rest always answer for
+ * the current season, and anything reactive that reads them updates when
+ * the season changes to one on a different ladder.
+ *
+ * For another season's ladder (the admin panel and the submit form work on
+ * a season of their own choosing) use `app.ladderOf(season)`.
+ */
+export const ladder = new Proxy({}, { get: (_, key) => app.ladder[key] });
 
 export const app = new AppState();

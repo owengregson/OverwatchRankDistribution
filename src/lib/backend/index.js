@@ -26,7 +26,8 @@
  *   deleteSeason(id)
  *
  * Shapes
- *   Season      { id, year, number, name, model, datapoints: Datapoint[] }
+ *   Season      { id, year, number, name, model, ladder?, datapoints: Datapoint[] }
+ *               ladder is an id from src/data/ladder.js; without one the season is on the default ladder
  *   Datapoint   { id?, rank? | sr?, betterThan, weight?, note? }   betterThan is 0–100
  *   Submission  { id, seasonId, rank, betterThan, proofPath, status, createdAt, reviewedAt }
  *               status is 'pending' | 'approved' | 'denied'

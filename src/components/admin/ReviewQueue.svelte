@@ -11,7 +11,7 @@
   import { runAdminAction, srOf, timeAgo } from '@/lib/admin.js';
   import { backend, SUBMISSION_STATUSES } from '@/lib/backend/index.js';
   import { dissolve, ms, slide } from '@/lib/motion.js';
-  import { app, ladder } from '@/lib/state/app.svelte.js';
+  import { app } from '@/lib/state/app.svelte.js';
   import { toasts } from '@/lib/state/toasts.svelte.js';
 
   /** Percentage points between claim and curve: within CLOSE is fine, beyond FAR is suspicious. */
@@ -50,8 +50,10 @@
 
   /** How a submission compares with the curve as it stands. */
   function assess(submission) {
-    const sr = srOf(submission);
     const season = seasonOf(submission.seasonId);
+    // The rank is read on the ladder of the season it was submitted for.
+    const ladder = app.ladderOf(season);
+    const sr = srOf(submission, ladder);
     const model = season ? app.fitOf(season).model : null;
     if (sr === null) return { tier: null, label: 'Unknown rank', tone: 'bad' };
     const tier = ladder.divisionAt(sr).tier;

@@ -39,6 +39,7 @@ export function createSupabaseBackend({ url, anonKey }) {
     number: row.number,
     name: row.name,
     model: row.model,
+    ladder: row.ladder,
     datapoints: (row.datapoints ?? []).map(toDatapoint),
   });
 
@@ -69,7 +70,7 @@ export function createSupabaseBackend({ url, anonKey }) {
       const rows = unwrap(
         await client
           .from('seasons')
-          .select('id, year, number, name, model, datapoints(id, rank, sr, better_than, weight, note)'),
+          .select('id, year, number, name, model, ladder, datapoints(id, rank, sr, better_than, weight, note)'),
       );
       return rows.map(toSeason);
     },
@@ -174,7 +175,7 @@ export function createSupabaseBackend({ url, anonKey }) {
 
     async saveSeason(season, isNew) {
       const client = await getClient();
-      const row = { year: season.year, number: season.number, name: season.name };
+      const row = { year: season.year, number: season.number, name: season.name, ladder: season.ladder };
       const table = client.from('seasons');
       unwrap(await (isNew ? table.insert({ id: season.id, ...row }) : table.update(row).eq('id', season.id)));
     },

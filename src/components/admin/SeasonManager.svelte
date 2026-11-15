@@ -3,20 +3,29 @@
   import ConfirmButton from '@/components/ConfirmButton.svelte';
   import { runAdminAction } from '@/lib/admin.js';
   import { backend } from '@/lib/backend/index.js';
+  import { DEFAULT_LADDER, LADDER_CHOICES } from '@/lib/ladder/ladders.js';
   import { app } from '@/lib/state/app.svelte.js';
   import { toasts } from '@/lib/state/toasts.svelte.js';
 
   const thisYear = new Date().getFullYear();
+  const blank = () => ({ name: '', year: thisYear, number: null, ladder: DEFAULT_LADDER });
 
   /** Edits in progress, by season id. */
   let drafts = $state({});
-  let adding = $state({ name: '', year: thisYear, number: null });
+  let adding = $state(blank());
   let busyId = $state(null);
 
-  const draftFor = (season) => drafts[season.id] ?? { name: season.name, year: season.year, number: season.number };
+  /** The fields that can be edited here, as stored. A season with no ladder of its own is on the default one. */
+  const fieldsOf = (season) => ({
+    name: season.name,
+    year: season.year,
+    number: season.number,
+    ladder: season.ladder ?? DEFAULT_LADDER,
+  });
+  const draftFor = (season) => drafts[season.id] ?? fieldsOf(season);
   const isDirty = (season) => {
     const draft = drafts[season.id];
-    return Boolean(draft) && (draft.name !== season.name || draft.year !== season.year || draft.number !== season.number);
+    return Boolean(draft) && JSON.stringify(draft) !== JSON.stringify(fieldsOf(season));
   };
   const change = (season, field, value) => (drafts[season.id] = { ...draftFor(season), [field]: value });
 
@@ -53,7 +62,7 @@
     }
     const id = `${adding.year}-season-${adding.number}`;
     const ok = await run('new', () => backend.saveSeason({ id, ...adding, name: adding.name.trim() }, true), `${adding.name.trim()} added.`);
-    if (ok) adding = { name: '', year: thisYear, number: null };
+    if (ok) adding = blank();
   }
 
   const remove = (season) => run(season.id, () => backend.deleteSeason(season.id), `${season.name} deleted.`);
@@ -64,6 +73,7 @@
     <span>Name</span>
     <span>Year</span>
     <span>Number</span>
+    <span>Ladder</span>
     <span>Curve</span>
     <span></span>
   </div>
@@ -75,6 +85,12 @@
       <input class="input compact" aria-label="Name" value={draft.name} oninput={(e) => change(season, 'name', e.currentTarget.value)} />
       <input class="input compact" type="number" aria-label="Year" value={draft.year} oninput={(e) => change(season, 'year', e.currentTarget.valueAsNumber)} />
       <input class="input compact" type="number" aria-label="Season number" value={draft.number} oninput={(e) => change(season, 'number', e.currentTarget.valueAsNumber)} />
+      <!-- Which ladder the season was played on: its ranks are read on that ladder. -->
+      <select class="input compact" aria-label="Ladder" value={draft.ladder} onchange={(e) => change(season, 'ladder', e.currentTarget.value)}>
+        {#each LADDER_CHOICES as choice (choice.id)}
+          <option value={choice.id}>{choice.label}</option>
+        {/each}
+      </select>
       <span>
         <span class="chip {fit.model ? 'good' : 'bad'}" title={fit.error?.message}>
           {season.datapoints.length} datapoint{season.datapoints.length === 1 ? '' : 's'} · {fit.model ? 'fits' : 'no curve'}
@@ -97,6 +113,11 @@
     <input class="input compact" aria-label="New season name" placeholder="2026: Season 6" bind:value={adding.name} />
     <input class="input compact" type="number" aria-label="New season year" bind:value={adding.year} />
     <input class="input compact" type="number" aria-label="New season number" placeholder="6" bind:value={adding.number} />
+    <select class="input compact" aria-label="New season ladder" bind:value={adding.ladder}>
+      {#each LADDER_CHOICES as choice (choice.id)}
+        <option value={choice.id}>{choice.label}</option>
+      {/each}
+    </select>
     <span class="hint">Starts empty; add at least two datapoints.</span>
     <span class="actions">
       <button type="submit" class="btn small primary" disabled={busyId === 'new'}>Add season</button>
@@ -106,7 +127,7 @@
 
 <style>
   .table {
-    --columns: minmax(160px, 2fr) 90px 90px minmax(170px, 1.4fr) 230px;
+    --columns: minmax(150px, 2fr) 84px 84px 190px minmax(170px, 1.4fr) 220px;
   }
 
   .head,

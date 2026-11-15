@@ -8,7 +8,8 @@
   import { backend } from '@/lib/backend/index.js';
   import { toasts } from '@/lib/state/toasts.svelte.js';
 
-  let { seasonId, point = null, model = null } = $props();
+  /** `ladder` is the ladder of the season these datapoints belong to. */
+  let { seasonId, ladder, point = null, model = null } = $props();
 
   const blank = () => ({
     where: point ? (point.rank ?? String(point.sr)) : '',
@@ -30,12 +31,12 @@
   const dirty = $derived(JSON.stringify(draft) !== JSON.stringify(original));
   /** What the current curve says at this datapoint's SR, as a percentage. */
   const curve = $derived.by(() => {
-    const sr = point ? srOf(point) : null;
+    const sr = point ? srOf(point, ladder) : null;
     return model && sr !== null ? model.cdf(sr) * 100 : null;
   });
 
   function read() {
-    const where = parseWhere(draft.where);
+    const where = parseWhere(draft.where, ladder);
     if (!(draft.betterThan > 0 && draft.betterThan < 100)) throw new Error('"Better than" must be between 0 and 100.');
     if (!(draft.weight > 0)) throw new Error('Weight must be more than 0.');
     return { id: point?.id, ...where, betterThan: draft.betterThan, weight: draft.weight, note: draft.note.trim() };

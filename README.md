@@ -34,7 +34,7 @@ Day to day, use the admin panel at `/#/admin`:
 
 - **Review queue**: pending submissions, each shown next to what the current curve says for that rank, with the screenshot. Approve (optionally with a weight) or deny.
 - **Datapoints**: every datapoint behind a season. Edit, add or delete, and see the fit update. "Rank or SR" accepts `Master 3` or `3700`.
-- **Seasons**: add, rename or delete seasons. A new season stays hidden from visitors until it has enough datapoints for a curve.
+- **Seasons**: add, rename or delete seasons, and choose the ladder each was played on. A new season stays hidden from visitors until it has enough datapoints for a curve.
 
 `src/data/seasons/*.json` holds a bundled copy of each season. The site shows it for the instant before live data loads, or if the database cannot be reached. Format:
 
@@ -51,6 +51,8 @@ Day to day, use the admin panel at `/#/admin`:
   ]
 }
 ```
+
+A season played on an older ladder adds `"ladder": "classic"` (the ladder before Emerald existed). Its rank names are then read on that ladder, where "Silver 5" is 1500 SR and not 1000, and the chart shows that ladder's tiers. Without the field a season is on today's ladder. The ladders are defined in `src/data/ladder.js`.
 
 ## Connecting the database (Supabase)
 
@@ -80,7 +82,7 @@ scripts/                   measure-icons (icon sizes), extract-cursors (.cur →
 supabase/schema.sql        database tables and security rules
 src/
   config.js                database connection, author link
-  data/ladder.js           tiers: SR ranges, colours, icons, light effects
+  data/ladder.js           the ladders: each one's tiers and SR ranges, plus tier colours, icons, light effects
   data/seasons/            bundled seasons
   lib/model/               datapoints → fitted curve → readings
   lib/ladder/              tiers and divisions, rank-name parsing
@@ -97,7 +99,7 @@ tests/                     model and ladder tests
 
 Common changes:
 
-- **Ladder** (a new tier, different SR ranges, colours): `src/data/ladder.js`.
+- **Ladder** (a new tier, different SR ranges, colours): `src/data/ladder.js`. It holds every ladder the game has had (`LADDERS`); each season names the one it was played on. When the ladder changes again, add a new entry there and make it `DEFAULT_LADDER`, leaving the old one for the seasons that used it. A database-backed season stores its ladder in the `ladder` column (`supabase/schema.sql`).
 - **Rank icons**: replace or add an image in `assets/images`, then run `node scripts/measure-icons.mjs`. The icon files differ in shape and scale, so the site measures how much each one actually covers and scales them to look the same size (`src/lib/ladder/iconSizing.js`).
 - **Rank light effects** (glow, streak, rays, sparkles): the `EFFECTS` table and the `RAY` and `STREAK_OPACITY` settings at the top of `src/components/RankAura.svelte`; which tier uses which is `glow` in the ladder.
 - **Cursors**: the site draws its own cursor (`src/components/CustomCursor.svelte`), because Chrome swaps any image cursor for the system one wherever it would cross the edge of the page. Size is `CURSOR_SCALE` in `src/lib/cursor/cursors.js`; which elements get the arrow, finger or text bar is `src/styles/cursors.css`. After replacing a `.cur`, run `node scripts/extract-cursors.mjs`.
@@ -112,7 +114,8 @@ The chart is rendered by JavaScript behind a `#`, which search engines index poo
 
 - **Articles** (`/articles/<slug>/`, listed at `/articles/`): guides to the rank distribution. Each one is a JS module in `scripts/site/articles/` whose numbers come from the bundled seasons, the ladder and the model (`scripts/site/data.js`), never typed in, so they follow the data on every build. Add one by writing a module there and listing it in `scripts/site/articles/index.js`.
 - **`sitemap.xml`, `robots.txt`, `site.webmanifest`, `404.html`**, generated alongside. "Last updated" and sitemap dates come from git history, which is why the deploy workflow checks out the full history.
-- **Head tags** in `index.html` (description, canonical, Open Graph, Twitter card, JSON-LD) use double-brace placeholders filled in from `site.config.js`. A short, visible "about" block at the end of the page describes the chart and links to the articles.
+- **Head tags** in `index.html` (description, canonical, Open Graph, Twitter card, JSON-LD) use double-brace placeholders filled in from `site.config.js`.
+- **Text summary** at the end of `index.html`: a description of the chart, a table of every rank (filled in from the data at build time) and links to the articles. It is a text version of the chart for screen reader users, who cannot use the canvas, and for visitors without JavaScript, who see it on screen. With JavaScript on it is kept out of sight (`src/styles/summary.css`). Keep it to what those readers need: text hidden from everyone just to feed search engines is against Google's spam policies, while text for screen readers is explicitly allowed.
 
 All of it is done by a small Vite plugin, `scripts/site/vitePlugin.js`: `npm run build` writes the pages into `dist/`, and `npm run dev` serves them too (re-rendered on each request). After a build, `npm run check:site` checks that every internal link and sitemap URL resolves, the JSON-LD parses and each article is in shape; the deploy workflow runs it.
 
