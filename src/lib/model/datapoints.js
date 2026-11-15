@@ -18,18 +18,16 @@ import { roleById } from '../../data/roles.js';
 /**
  * The highest figure the game shows. Its "higher ranked than" line is in
  * whole percents, so every player in the top 1% reads 99, wherever in that
- * 1% they are.
+ * 1% they are: past this figure there is nothing to measure with.
  *
- * A datapoint reading exactly this much therefore only says "in the top
- * 1%". The lowest of them is the best mark there is of where the top 1%
- * begins, and the curve is fitted to it as 99%. Any others, higher up,
- * say nothing more: which decimal of the top 1% they sit at is not known.
- * They are kept, but no curve is fitted to them (`counts` is false), so
- * from the mark upwards the curve is the bell tail that carries on from
- * the datapoints below it.
- *
- * A figure above 99 with decimals (99.3, from a published distribution) is
- * an exact one and counts like any other.
+ * So the curve is only ever fitted up to where the top 1% begins. The
+ * lowest datapoint at this figure or above is the mark of that, and is
+ * fitted like any other. Every datapoint above it that is also at this
+ * figure or more is kept, but no curve is fitted to it (`counts` is
+ * false), whatever figure it gives: 99 off a rank screen, or 99.3 off a
+ * published graph. From the mark upwards the curve is therefore the bell
+ * tail that carries on from the datapoints below it, in every season and
+ * with every model.
  */
 export const HIGHEST_READING = 99;
 
@@ -44,7 +42,7 @@ export function resolveDatapoints(rawPoints, ladder) {
     throw new Error('A season needs a "datapoints" array.');
   }
 
-  /** Whether the lowest datapoint at the game's highest reading has been passed: later ones do not count. */
+  /** Whether the lowest datapoint at the game's highest reading or above has been passed: later ones do not count. */
   let marked = false;
 
   return rawPoints
@@ -80,7 +78,7 @@ export function resolveDatapoints(rawPoints, ladder) {
         id: raw.id,
         sr,
         p: percent / 100,
-        atHighestReading: percent === HIGHEST_READING,
+        atHighestReading: percent >= HIGHEST_READING,
         weight,
         label: division ? division.name : `${sr} SR`,
         role: raw.role ?? undefined,

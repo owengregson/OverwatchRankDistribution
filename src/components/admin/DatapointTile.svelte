@@ -35,9 +35,9 @@
 
   /**
    * `ladder` is the ladder of the season these datapoints belong to.
-   * `counts` is false for a datapoint the curve is not fitted to: one that
-   * reads the game's highest figure, 99%, above the lowest datapoint that
-   * does (see HIGHEST_READING in lib/model/datapoints.js).
+   * `counts` is false for a datapoint the curve is not fitted to: one at
+   * the game's highest figure, 99%, or more, above the lowest datapoint
+   * that is (see HIGHEST_READING in lib/model/datapoints.js).
    */
   let { seasonId, ladder, point = null, model = null, counts = true } = $props();
 
@@ -205,7 +205,7 @@
       {#if !counts}
         <span
           class="chip"
-          title="The game shows whole percents, so 99% only says 'in the top 1%'. The lowest datapoint reading 99% marks where that begins; the curve is not fitted to the ones above it."
+          title="The game shows whole percents and stops at 99, so the top 1% cannot be measured. The lowest datapoint at 99% or more marks where it begins; the curve is not fitted to the ones above it, and is a bell tail from there up."
         >
           Above the 99% mark · not fitted
         </span>

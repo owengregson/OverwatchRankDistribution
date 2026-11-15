@@ -261,8 +261,10 @@ describe('2026 Season 4', () => {
   // The share of players in each division on the community graph the season
   // was taken from, in percent, Bronze 5 first. The graph stops at
   // Grandmaster and its figures add up to 99.8. The season's datapoints
-  // are those figures added up from the bottom, exactly as given; what is
-  // left over, 0.2%, is Champion.
+  // are those figures added up from the bottom, exactly as given.
+  //
+  // The curve follows them up to Grandmaster 5, where the top 1% begins.
+  // Above that it is a bell tail, not the graph (see HIGHEST_READING).
   const GRAPH = [
     [1.4, 0.6, 0.7, 1.0, 1.2],
     [1.5, 1.8, 2.2, 2.6, 3.0],
@@ -276,13 +278,27 @@ describe('2026 Season 4', () => {
   const model = buildSeasonModel(season4, ladder);
   const shareOf = (division) => (model.cdf(division.maxSr) - model.cdf(division.minSr)) * 100;
 
-  it('gives back every division on the graph it was taken from', () => {
-    GRAPH.forEach((row, t) => {
+  it('gives back every division on the graph it was taken from, up to the top 1%', () => {
+    GRAPH.slice(0, -1).forEach((row, t) => {
       row.forEach((share, d) => {
         const division = ladder.tiers[t].divisions[d];
         expect(shareOf(division), division.name).toBeCloseTo(share, 6);
       });
     });
+  });
+
+  it('is a bell tail from Grandmaster 5 up, whatever the graph says there', () => {
+    const top = model.points.filter((pt) => pt.sr >= 4000);
+    expect(top.map((pt) => pt.counts)).toEqual([true, false, false, false, false, false]);
+    expect(model.cdf(4000)).toBeCloseTo(0.99, 9);
+    // The graph's Grandmaster divisions are 0.3, 0.2, 0.1, 0.1, 0.1: a bell tail thins out evenly instead.
+    const shares = ladder.tiers[7].divisions.map(shareOf);
+    shares.forEach((share, i) => i && expect(share).toBeLessThan(shares[i - 1]));
+    expect(shares[0]).not.toBeCloseTo(0.3, 3);
+    // A straight line in z, as a bell is.
+    const z = (sr) => probit(model.cdf(sr));
+    const step = z(4100) - z(4000);
+    for (const sr of [4100, 4300, 4600]) expect(z(sr + 100) - z(sr)).toBeCloseTo(step, 6);
   });
 
   it('has the spike at Bronze 5 that a bell curve cannot', () => {
@@ -292,14 +308,19 @@ describe('2026 Season 4', () => {
     expect(bell.cdf(bronze5.maxSr)).toBeLessThan(bell.cdf(bronze4.maxSr) - bell.cdf(bronze5.maxSr));
   });
 
-  it('passes through every one of its datapoints', () => {
+  it('passes through every datapoint it is fitted to', () => {
     expect(model.points).toHaveLength(season4.datapoints.length);
     expect(model.rmse).toBeLessThan(1e-9);
+    for (const point of model.points.filter((pt) => pt.counts)) expect(point.fitted).toBeCloseTo(point.p, 9);
   });
 
-  it('leaves what the graph does not account for to Champion', () => {
-    const champion = tierShares(model, ladder).at(-1).share * 100;
-    expect(champion).toBeCloseTo(0.2, 6);
+  it('shares the top 1% between Grandmaster and Champion', () => {
+    const [grandmaster, champion] = tierShares(model, ladder)
+      .slice(-2)
+      .map(({ share }) => share * 100);
+    expect(grandmaster + champion).toBeCloseTo(1, 6);
+    expect(champion).toBeGreaterThan(0.1);
+    expect(champion).toBeLessThan(0.2);
   });
 
   it('puts the median in Platinum', () => {
@@ -357,12 +378,19 @@ describe('seasons before Emerald', () => {
     expect(fitted[7]).toBeLessThan(0.1);
   });
 
-  it('gives back the Season 12 tier shares, top tiers included', () => {
+  it('gives back the Season 12 tier shares up to the top 1%, and a bell tail above', () => {
     // Bronze first, from the published cut-offs: top 95.4%, 75.2%, 38.53%, 11.6%, 2.21%, 0.28% and 0.01%.
     // A bell curve could not hold this many players in the top tiers; this curve does not have to be one.
     const PUBLISHED = [4.6, 20.2, 36.67, 26.93, 9.39, 1.93, 0.27, 0.01];
-    const fitted = sharesOf(buildSeasonModel(season12, ladderOf(season12)));
-    PUBLISHED.forEach((share, i) => expect(fitted[i]).toBeCloseTo(share, 6));
+    const model = buildSeasonModel(season12, ladderOf(season12));
+    const fitted = sharesOf(model);
+    PUBLISHED.slice(0, 6).forEach((share, i) => expect(fitted[i]).toBeCloseTo(share, 6));
+    // Grandmaster 5 is the first datapoint in the top 1%, so the Champion cut-off above it is not fitted:
+    // the two top tiers share the published 0.28% as a bell tail splits it.
+    expect(model.points.map((pt) => pt.counts)).toEqual([true, true, true, true, true, true, false]);
+    expect(fitted[6] + fitted[7]).toBeCloseTo(0.28, 6);
+    expect(fitted[7]).toBeGreaterThan(0.01);
+    expect(fitted[7]).toBeLessThan(0.05);
   });
 
   it('keeps both of them close to a bell', () => {
@@ -514,9 +542,22 @@ describe('the game\'s highest reading, 99%', () => {
         }
       });
 
-      it('is not the curve it would be if they were taken at their word', () => {
-        const literal = build([...below, mark, ...above.map((pt) => ({ ...pt, betterThan: 99.0001 }))]);
-        expect(literal.cdf(4200)).not.toBeCloseTo(marked.cdf(4200), 4);
+      it('is the same curve when those above give decimals, as a published graph does', () => {
+        const decimals = build([...below, mark, ...above.map((pt, i) => ({ ...pt, betterThan: 99.3 + i * 0.3 }))]);
+        expect(decimals.points.map((pt) => pt.counts)).toEqual([true, true, true, true, false, false, false]);
+        for (const sr of SAMPLES) expect(decimals.cdf(sr), `${sr} SR`).toBe(marked.cdf(sr));
+      });
+
+      it('fits the mark at the figure it gives, whole or not', () => {
+        const published = build([...below, { ...mark, betterThan: 99.4 }, ...above]);
+        expect(published.points[3].counts).toBe(true);
+        if (type === 'freeform') expect(published.cdf(4000)).toBeCloseTo(0.994, 9);
+        expect(published.cdf(4000)).toBeGreaterThan(marked.cdf(4000));
+      });
+
+      it('still fits a figure under 99 that sits above the mark', () => {
+        const points = build([...below, mark, { rank: 'Grandmaster 4', betterThan: 98.9 }]).points;
+        expect(points.at(-1).counts).toBe(true);
       });
     });
   }
@@ -531,15 +572,11 @@ describe('the game\'s highest reading, 99%', () => {
     for (const sr of [4100, 4300, 4700]) expect(z(sr + 100) - z(sr)).toBeCloseTo(step, 6);
   });
 
-  it('takes a figure above 99 with decimals as exact', () => {
-    const model = buildSeasonModel(season4, ladder);
+  it('leaves a season with one datapoint in the top 1% as it was', () => {
+    // Season 17's only figure of 99 or more is Grandmaster 5, at 99.7: it is the mark, and there is nothing above it.
+    const model = buildSeasonModel(season17, ladderOf(season17));
     expect(model.points.every((pt) => pt.counts)).toBe(true);
-    const points = buildSeasonModel(
-      { model: 'freeform', datapoints: [...below, mark, { rank: 'Grandmaster 1', betterThan: 99.7 }] },
-      ladder,
-    ).points;
-    expect(points.at(-1).counts).toBe(true);
-    expect(points.at(-1).fitted).toBeCloseTo(0.997, 9);
+    expect(model.points.at(-1).fitted).toBeCloseTo(0.997, 9);
   });
 
   it('cannot make a curve from readings of 99% alone', () => {

@@ -29,7 +29,7 @@
 
   /** What the curve choices do, shown when one is hovered. */
   const MODEL_HINT =
-    'Bell curve: the bell closest to the datapoints, for a few community figures. Follows the data: passes through every datapoint, for a season whose whole distribution is known.';
+    'Bell curve: the bell closest to the datapoints, for a few community figures. Follows the data: passes through every datapoint, for a season whose whole distribution is known. Either way it is a bell tail above the lowest datapoint in the top 1%.';
 
   /** Edits in progress, by season id. */
   let drafts = $state({});
