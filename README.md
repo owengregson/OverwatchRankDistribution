@@ -100,3 +100,17 @@ Common changes:
 - **Rank light effects** (glow, streak, rays, sparkles): the `EFFECTS` table and the `RAY` and `STREAK_OPACITY` settings at the top of `src/components/RankAura.svelte`; which tier uses which is `glow` in the ladder.
 - **Cursors**: the site draws its own cursor (`src/components/CustomCursor.svelte`), because Chrome swaps any image cursor for the system one wherever it would cross the edge of the page. Size is `CURSOR_SCALE` in `src/lib/cursor/cursors.js`; which elements get the arrow, finger or text bar is `src/styles/cursors.css`. After replacing a `.cur`, run `node scripts/extract-cursors.mjs`.
 - **Theme**: `src/styles/tokens.css`.
+
+## Search engines, articles and link previews
+
+The chart is rendered by JavaScript behind a `#`, which search engines index poorly, so the build also produces plain HTML pages that need no JavaScript:
+
+- **Articles** (`/articles/<slug>/`, listed at `/articles/`): guides to the rank distribution. Each one is a JS module in `scripts/site/articles/` whose numbers come from the bundled seasons, the ladder and the model (`scripts/site/data.js`), never typed in, so they follow the data on every build. Add one by writing a module there and listing it in `scripts/site/articles/index.js`.
+- **`sitemap.xml`, `robots.txt`, `site.webmanifest`, `404.html`**, generated alongside. "Last updated" and sitemap dates come from git history, which is why the deploy workflow checks out the full history.
+- **Head tags** in `index.html` (description, canonical, Open Graph, Twitter card, JSON-LD) use double-brace placeholders filled in from `site.config.js`. A short, visible "about" block at the end of the page describes the chart and links to the articles.
+
+All of it is done by a small Vite plugin, `scripts/site/vitePlugin.js`: `npm run build` writes the pages into `dist/`, and `npm run dev` serves them too (re-rendered on each request). After a build, `npm run check:site` checks that every internal link and sitemap URL resolves, the JSON-LD parses and each article is in shape; the deploy workflow runs it.
+
+**Production URL.** `site.config.js` holds the address every absolute URL is built from (`https://owengregson.github.io/OverwatchRankDistribution/`). To move to a custom domain, change `url` there and add a `public/CNAME` file. Crawlers only read `robots.txt` at the root of a host, so it takes effect once the site has its own domain; until then, submit the sitemap in Google Search Console.
+
+**Preview image and icons.** `public/og-image.png` (1200×630) and `public/icons/*.png` are drawn from the ladder, the newest season's curve, the fonts and the logo by `npm run images` (no dependencies). Run it again after changing any of those, and commit the results.
