@@ -1,0 +1,33 @@
+/*
+ * Site cursor set (assets/cursors). Each falls back to the system cursor of
+ * the same meaning if the image cannot be used.
+ */
+:root {
+  --cursor-default: url('../../assets/cursors/overwatch_pointer.cur'), auto;
+  --cursor-link: url('../../assets/cursors/overwatch_finger.cur'), pointer;
+  --cursor-text: url('../../assets/cursors/overwatch_text.cur'), text;
+}
+
+html {
+  cursor: var(--cursor-default);
+}
+
+a,
+button,
+summary,
+select,
+label[for],
+[role='button'],
+[role='tab'] {
+  cursor: var(--cursor-link);
+}
+
+input:not([type='button'], [type='submit'], [type='checkbox'], [type='radio'], [type='range']),
+textarea,
+[contenteditable='true'] {
+  cursor: var(--cursor-text);
+}
+
+:disabled {
+  cursor: var(--cursor-default);
+}
