@@ -1,13 +1,17 @@
 /*
  * Site cursor set (assets/cursors).
  *
- * A .cur file cannot be resized by the browser, so the site uses the 64px
- * PNGs extracted from the .cur files (see scripts/extract-cursors.mjs) and
- * declares them as "1.5x" images. That draws them at 64 ÷ 1.5 ≈ 43px.
+ * A .cur file cannot be resized by the browser, so the site uses PNGs made
+ * from the .cur files by scripts/extract-cursors.mjs and declares them as
+ * "1.5x" images, which draws them at (pixel size ÷ 1.5).
  *
  * To change the size, change the 1.5x (bigger number = smaller cursor) and
  * scale the hotspots to match:
  * hotspot = (hotspot printed by the script) ÷ (that number).
+ *
+ * Keep every cursor at or under 32×32 CSS pixels (48 image pixels at 1.5x).
+ * Chrome swaps any larger custom cursor for the system arrow whenever it
+ * overlaps the edge of the page, e.g. over the footer.
  *
  * Browsers that cannot do this keep the system cursor of the same meaning.
  */
