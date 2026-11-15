@@ -7,6 +7,8 @@
 html {
   color-scheme: dark;
   -webkit-text-size-adjust: 100%;
+  /* Decorative glows may reach past the edge of the page; never scroll sideways for them. */
+  overflow-x: clip;
 }
 
 body {
