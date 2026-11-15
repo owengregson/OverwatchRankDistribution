@@ -10,7 +10,9 @@
   arrows, Home and End move; Enter or Space picks; Escape or Tab closes;
   typing jumps to the option that starts with what was typed.
 
-  `options` is a list of { value, label }.
+  `options` is a list of { value, label }. An option may also have an
+  `icon`, the address of a one-colour image drawn before its label
+  (Glyph.svelte).
 
   As a menu: with a `caption` the button always reads that, whatever is
   chosen, and with `bare` it has none of a field's styling, so the parent
@@ -19,6 +21,7 @@
 -->
 <script>
   import { tick } from 'svelte';
+  import Glyph from '@/components/Glyph.svelte';
 
   let {
     value = $bindable(),
@@ -170,6 +173,7 @@
   onclick={() => (open ? hide() : show())}
   {onkeydown}
 >
+  {#if !caption && selected?.icon}<Glyph src={selected.icon} />{/if}
   <span class="current">{caption ?? selected?.label ?? ''}</span>
   <svg class="chevron" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" /></svg>
 </button>
@@ -204,7 +208,7 @@
         onpointerenter={() => (active = i)}
         onclick={() => pick(i)}
       >
-        {option.label}
+        {#if option.icon}<span class="mark"><Glyph src={option.icon} /></span>{/if}{option.label}
       </div>
     {/each}
   </div>
@@ -228,6 +232,8 @@
   }
 
   .current {
+    /* Takes the room between an option's icon and the arrow, so the icon stays beside its label. */
+    flex: 1;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -316,6 +322,11 @@
 
   .compact .option {
     padding: 6px 8px 5px 12px;
+  }
+
+  /* An option's icon, before its label. */
+  .mark {
+    margin-right: 8px;
   }
 
   /* A bar down the left edge marks the option in use. */

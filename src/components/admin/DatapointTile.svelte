@@ -20,11 +20,13 @@
 -->
 <script>
   import ConfirmButton from '@/components/ConfirmButton.svelte';
+  import Glyph from '@/components/Glyph.svelte';
   import RankBadge from '@/components/RankBadge.svelte';
   import Select from '@/components/Select.svelte';
   import Slider from '@/components/Slider.svelte';
   import { ROLES, roleById } from '@/data/roles.js';
   import { runAdminAction, srOf } from '@/lib/admin.js';
+  import { imageUrl } from '@/lib/assets.js';
   import { backend } from '@/lib/backend/index.js';
   import { formatSr } from '@/lib/format.js';
   import { MAX_PROGRESS, progressAt, srAt } from '@/lib/ladder/progress.js';
@@ -181,6 +183,10 @@
   >
     {#if point}
       <RankBadge {tier} division={division.number} size={40} animated={false} effects={false} />
+      <!-- The role it is for, in the corner. A datapoint from a database that has no roles yet has none to show. -->
+      {#if roleById(point.role)}
+        <span class="corner"><Glyph src={imageUrl(roleById(point.role).icon)} size={10} /></span>
+      {/if}
     {:else}
       <span class="plus" aria-hidden="true"></span>
     {/if}
@@ -264,7 +270,7 @@
           compact
           label="Role"
           bind:value={draft.role}
-          options={ROLES.map((option) => ({ value: option.id, label: option.name }))}
+          options={ROLES.map((option) => ({ value: option.id, label: option.name, icon: imageUrl(option.icon) }))}
         />
       </div>
       <label class="field">
@@ -300,6 +306,15 @@
     border-color: var(--tier);
     background: color-mix(in srgb, var(--tier) 14%, rgb(5 10 26 / 0.45));
     transform: translateY(-2px);
+  }
+
+  /* The role's icon, small, in the tile's top left corner. */
+  .corner {
+    position: absolute;
+    top: 3px;
+    left: 4px;
+    display: flex;
+    color: var(--ice-300);
   }
 
   /* A datapoint the curve is not fitted to. */
@@ -399,7 +414,7 @@
 
   .controls {
     display: grid;
-    grid-template-columns: 140px minmax(120px, 1fr) minmax(160px, 1.5fr) 96px 118px 72px minmax(130px, 1.5fr);
+    grid-template-columns: 140px minmax(120px, 1fr) minmax(160px, 1.5fr) 96px 134px 72px minmax(130px, 1.5fr);
     align-items: end;
     gap: 8px 16px;
   }

@@ -10,10 +10,12 @@
 <script>
   import { flip } from 'svelte/animate';
   import ConfirmButton from '@/components/ConfirmButton.svelte';
+  import Glyph from '@/components/Glyph.svelte';
   import ProofImage from '@/components/admin/ProofImage.svelte';
   import RankBadge from '@/components/RankBadge.svelte';
   import Select from '@/components/Select.svelte';
   import { ROLES, roleById } from '@/data/roles.js';
+  import { imageUrl } from '@/lib/assets.js';
   import { runAdminAction, srOf, timeAgo } from '@/lib/admin.js';
   import { backend, SUBMISSION_STATUSES } from '@/lib/backend/index.js';
   import { formatSr } from '@/lib/format.js';
@@ -39,7 +41,7 @@
 
   /** What stands in the role dropdown for a submission whose role could not be read. */
   const UNREAD = '';
-  const ROLE_OPTIONS = ROLES.map((role) => ({ value: role.id, label: role.name }));
+  const ROLE_OPTIONS = ROLES.map((role) => ({ value: role.id, label: role.name, icon: imageUrl(role.icon) }));
   const roleOf = (submission) => roles[submission.id] ?? submission.role ?? UNREAD;
   const roleOptions = (submission) =>
     submission.role ? ROLE_OPTIONS : [{ value: UNREAD, label: 'Not read' }, ...ROLE_OPTIONS];
@@ -126,6 +128,7 @@
     {#each submissions as submission (submission.id)}
       {@const verdict = assess(submission)}
       {@const busy = busyId === submission.id}
+      {@const reviewedRole = status === 'pending' ? null : roleById(submission.role)}
       <li class="row" class:busy animate:flip={{ duration: ms(260) }} in:slide out:dissolve>
         <div class="who">
           {#if verdict.tier}
@@ -134,7 +137,7 @@
           <div>
             <div class="display rank">{submission.rank}</div>
             <div class="meta">
-              {#if status !== 'pending' && submission.role}{roleById(submission.role)?.name} · {/if}{#if submission.sr !== null && submission.sr !== undefined}{formatSr(submission.sr)} SR · {/if}{seasonName(submission.seasonId)} · {timeAgo(
+              {#if reviewedRole}<Glyph src={imageUrl(reviewedRole.icon)} size={11} label={reviewedRole.name} /> · {/if}{#if submission.sr !== null && submission.sr !== undefined}{formatSr(submission.sr)} SR · {/if}{seasonName(submission.seasonId)} · {timeAgo(
                 submission.createdAt,
               )}
             </div>
@@ -320,9 +323,9 @@
     font-size: 9px;
   }
 
-  /* Wide enough for the longest role name. */
+  /* Wide enough for the longest role name beside its icon. */
   .role :global(.trigger) {
-    width: 112px;
+    width: 134px;
   }
 
   .weight .input {
