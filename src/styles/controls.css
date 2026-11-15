@@ -17,6 +17,7 @@
   background: rgb(5 10 26 / 0.45);
   color: var(--ice-100);
   font-size: 13px;
+  text-decoration: none;
   white-space: nowrap;
   transition:
     background 180ms,

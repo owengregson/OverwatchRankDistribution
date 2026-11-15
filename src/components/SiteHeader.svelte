@@ -1,23 +1,42 @@
-<!-- Light floating nav bar: brand tile, season tabs and call to action. -->
+<!-- Light floating nav bar: brand tile, season tabs, page links and call to action. -->
 <script>
   import { imageUrl } from '@/lib/assets.js';
+  import { backend } from '@/lib/backend/index.js';
+  import { href, router } from '@/lib/router.svelte.js';
   import { app } from '@/lib/state/app.svelte.js';
   import { focusFinder } from '@/lib/ui.js';
+
+  const onHome = $derived(router.path === '');
+
+  /** The finder lives on the home page: go there first if needed. */
+  async function findMyRank() {
+    if (!onHome) {
+      router.go('');
+      // Wait for the home page to be on screen before focusing its input.
+      await new Promise((resolve) => setTimeout(resolve, 60));
+    }
+    focusFinder();
+  }
+
+  function selectSeason(id) {
+    app.selectSeason(id);
+    if (!onHome) router.go('');
+  }
 </script>
 
 <header class="nav">
-  <div class="brand">
+  <a class="brand" href={href('')} aria-label="Rank Distribution home">
     <img class="mark" src={imageUrl('Overwatch_Icon.webp')} alt="Overwatch" width="36" height="36" draggable="false" />
     <span class="display wordmark">Rank Distribution</span>
-  </div>
+  </a>
 
   <nav class="seasons" aria-label="Season">
     {#each app.seasons as season (season.id)}
       <button
         type="button"
-        class:current={season.id === app.seasonId}
+        class:current={onHome && season.id === app.seasonId}
         aria-current={season.id === app.seasonId ? 'true' : undefined}
-        onclick={() => app.selectSeason(season.id)}
+        onclick={() => selectSeason(season.id)}
       >
         {season.name}
       </button>
@@ -26,7 +45,15 @@
 
   <div class="spacer"></div>
 
-  <button type="button" class="cta" onclick={focusFinder}>Find my rank</button>
+  {#if backend.canSubmit}
+    <a class="link" class:current={router.path === 'submit'} href={href('submit')}>
+      <span class="plus" aria-hidden="true"></span>
+      <span class="long">Submit a datapoint</span>
+      <span class="short">Submit</span>
+    </a>
+  {/if}
+
+  <button type="button" class="cta" onclick={findMyRank}>Find my rank</button>
 </header>
 
 <style>
@@ -57,6 +84,8 @@
     border-radius: 6px 0 0 6px;
     background: #fff;
     box-shadow: 1px 0 0 rgb(16 27 64 / 0.1);
+    color: inherit;
+    text-decoration: none;
   }
 
   .mark {
@@ -113,6 +142,67 @@
 
   .spacer {
     flex: 1;
+  }
+
+  .link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    height: 100%;
+    padding: 0 16px;
+    font-size: 15px;
+    color: var(--ice-500);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color 180ms;
+  }
+
+  .link::after {
+    content: '';
+    position: absolute;
+    inset: auto 16px 9px;
+    height: 3px;
+    background: var(--orange);
+    scale: 0 1;
+    transition: scale 300ms var(--ease-out);
+  }
+
+  .link:hover,
+  .link.current {
+    color: var(--navy-800);
+  }
+
+  .link.current::after {
+    scale: 1 1;
+  }
+
+  /* A plus sign that turns a quarter on hover. */
+  .plus {
+    position: relative;
+    width: 12px;
+    height: 12px;
+    transition: rotate 320ms var(--ease-back);
+  }
+
+  .plus::before,
+  .plus::after {
+    content: '';
+    position: absolute;
+    inset: 5px 0;
+    background: var(--orange);
+  }
+
+  .plus::after {
+    rotate: 90deg;
+  }
+
+  .link:hover .plus {
+    rotate: 90deg;
+  }
+
+  .short {
+    display: none;
   }
 
   .cta {
@@ -178,6 +268,19 @@
 
     .cta {
       padding: 0 14px;
+    }
+
+    .link {
+      padding: 0 8px;
+      font-size: 13px;
+    }
+
+    .long {
+      display: none;
+    }
+
+    .short {
+      display: inline;
     }
   }
 </style>
