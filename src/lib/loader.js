@@ -28,9 +28,9 @@ const TIMING = {
   /** The full bar flashes for this long before the screen starts to go. */
   flash: 120,
   /** The screen's dissolve, after which it is removed. Matches the transition in loader.css. */
-  dissolve: 800,
+  dissolve: 450,
   /** How far into the dissolve the page underneath starts its entrance. */
-  entrance: 140,
+  entrance: 40,
 };
 
 /**

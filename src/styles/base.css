@@ -156,8 +156,8 @@ html.loading .app *::after {
 
 /* Staggered entrance: set --i on the element to order it. */
 .rise {
-  animation: rise 700ms var(--ease-out) backwards;
-  animation-delay: calc(var(--i, 0) * 90ms + 120ms);
+  animation: rise 480ms var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 55ms + 40ms);
 }
 
 @keyframes rise {

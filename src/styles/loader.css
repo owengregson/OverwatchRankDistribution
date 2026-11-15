@@ -28,7 +28,7 @@
   user-select: none;
   -webkit-user-select: none;
   /* Matches TIMING.dissolve in src/lib/loader.js. */
-  transition: opacity 800ms var(--ease-in-out);
+  transition: opacity 450ms var(--ease-in-out);
 }
 
 /* Nothing behind the loading screen should scroll. */
@@ -48,8 +48,8 @@ html.loading {
   display: grid;
   justify-items: center;
   transition:
-    scale 800ms var(--ease-in-out),
-    filter 800ms var(--ease-in-out);
+    scale 450ms var(--ease-in-out),
+    filter 450ms var(--ease-in-out);
 }
 
 .is-opening .loader__stage {

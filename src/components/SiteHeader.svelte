@@ -80,7 +80,7 @@
     box-shadow:
       0 14px 34px rgb(0 0 0 / 0.38),
       inset 0 -2px 0 rgb(16 27 64 / 0.1);
-    animation: drop-in 700ms var(--ease-out) backwards;
+    animation: drop-in 480ms var(--ease-out) backwards;
   }
 
   .brand {

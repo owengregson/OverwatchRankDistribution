@@ -71,8 +71,8 @@
     transition:
       opacity 260ms var(--ease-out),
       transform 320ms var(--ease-back);
-    animation: tier-in 620ms var(--ease-back) backwards;
-    animation-delay: calc(var(--i) * 70ms + 500ms);
+    animation: tier-in 460ms var(--ease-back) backwards;
+    animation-delay: calc(var(--i) * 40ms + 240ms);
   }
 
   .tier::after {

@@ -31,7 +31,7 @@
   /** SR between curve samples. 10 SR is about 2px on a wide screen; the curve is smoothed between them. */
   const SAMPLE_STEP = 10;
   /** The intro, in ms: once the page opens the curve waits for its panel to arrive, then draws itself. */
-  const INTRO = { wait: 520, draw: 1300 };
+  const INTRO = { wait: 280, draw: 1300 };
   /** How quickly the cursor arrives (ms) the first time the visitor picks a point. */
   const CURSOR_ARRIVAL = 320;
   /** Empty space kept above the curve's peak, as a fraction of the peak. */
