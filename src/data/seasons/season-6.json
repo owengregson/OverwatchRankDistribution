@@ -1,0 +1,10 @@
+{
+  "id": "season-6",
+  "number": 6,
+  "name": "Season 6",
+  "model": "normal",
+  "datapoints": [
+    { "rank": "Master 3", "betterThan": 97 },
+    { "rank": "Master 2", "betterThan": 98 }
+  ]
+}
