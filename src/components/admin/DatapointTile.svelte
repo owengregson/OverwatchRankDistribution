@@ -15,12 +15,15 @@
 
   At 0% the datapoint is stored as the rank ("Master 3"), and above that as
   the exact SR the three add up to.
+
+  Its role (data/roles.js) is which role the figure is for.
 -->
 <script>
   import ConfirmButton from '@/components/ConfirmButton.svelte';
   import RankBadge from '@/components/RankBadge.svelte';
   import Select from '@/components/Select.svelte';
   import Slider from '@/components/Slider.svelte';
+  import { ROLES, roleById } from '@/data/roles.js';
   import { runAdminAction, srOf } from '@/lib/admin.js';
   import { backend } from '@/lib/backend/index.js';
   import { formatSr } from '@/lib/format.js';
@@ -28,8 +31,13 @@
   import { slide } from '@/lib/motion.js';
   import { toasts } from '@/lib/state/toasts.svelte.js';
 
-  /** `ladder` is the ladder of the season these datapoints belong to. */
-  let { seasonId, ladder, point = null, model = null } = $props();
+  /**
+   * `ladder` is the ladder of the season these datapoints belong to.
+   * `counts` is false for a datapoint the curve is not fitted to: one that
+   * reads the game's highest figure, 99%, above the lowest datapoint that
+   * does (see HIGHEST_READING in lib/model/datapoints.js).
+   */
+  let { seasonId, ladder, point = null, model = null, counts = true } = $props();
 
   /** Where the stored datapoint sits, as the three controls show it; null if its rank is not on this ladder. */
   function placeOf(stored) {
@@ -49,6 +57,7 @@
   const blank = () => ({
     ...(placeOf(point) ?? middle()),
     betterThan: point?.betterThan ?? null,
+    role: point?.role ?? ROLES[0].id,
     weight: point?.weight ?? 1,
     note: point?.note ?? '',
   });
@@ -92,7 +101,9 @@
       draft.progress ? `${draft.progress}% through` : null,
       `${formatSr(sr)} SR`,
       draft.betterThan === null ? null : `better than ${draft.betterThan}%`,
+      roleById(draft.role)?.name,
       curve === null ? null : `curve says ${curve.toFixed(2)}%`,
+      counts ? null : 'not fitted: above the 99% mark',
     ]
       .filter(Boolean)
       .join(' · '),
@@ -119,7 +130,14 @@
   function read() {
     if (!(draft.betterThan > 0 && draft.betterThan < 100)) throw new Error('"Better than" must be between 0 and 100.');
     if (!(draft.weight > 0)) throw new Error('Weight must be more than 0.');
-    return { id: point?.id, ...where(), betterThan: draft.betterThan, weight: draft.weight, note: draft.note.trim() };
+    return {
+      id: point?.id,
+      ...where(),
+      betterThan: draft.betterThan,
+      role: draft.role,
+      weight: draft.weight,
+      note: draft.note.trim(),
+    };
   }
 
   async function save(event) {
@@ -154,6 +172,7 @@
     class="tile"
     class:adding={!point}
     class:dirty
+    class:left-out={!counts}
     style:--tier={tier.color}
     aria-expanded="false"
     aria-label={point ? `Edit datapoint: ${summary}` : 'Add a datapoint'}
@@ -176,6 +195,14 @@
       </div>
       {#if unplaced}
         <span class="chip warn">"{point.rank}" is not on this season's ladder</span>
+      {/if}
+      {#if !counts}
+        <span
+          class="chip"
+          title="The game shows whole percents, so 99% only says 'in the top 1%'. The lowest datapoint reading 99% marks where that begins; the curve is not fitted to the ones above it."
+        >
+          Above the 99% mark · not fitted
+        </span>
       {/if}
       <span class="actions">
         {#if point}
@@ -231,6 +258,15 @@
           %
         </span>
       </label>
+      <div class="field" title="The role the figure is for.">
+        <span class="label">Role</span>
+        <Select
+          compact
+          label="Role"
+          bind:value={draft.role}
+          options={ROLES.map((option) => ({ value: option.id, label: option.name }))}
+        />
+      </div>
       <label class="field">
         <span class="label">Weight</span>
         <input class="input compact" type="number" min="0" step="any" required bind:value={draft.weight} />
@@ -264,6 +300,11 @@
     border-color: var(--tier);
     background: color-mix(in srgb, var(--tier) 14%, rgb(5 10 26 / 0.45));
     transform: translateY(-2px);
+  }
+
+  /* A datapoint the curve is not fitted to. */
+  .tile.left-out :global(.badge) {
+    opacity: 0.4;
   }
 
   /* Edits that have not been saved, on a tile that was closed again. */
@@ -358,7 +399,7 @@
 
   .controls {
     display: grid;
-    grid-template-columns: 140px minmax(130px, 1fr) minmax(170px, 1.5fr) 96px 72px minmax(140px, 1.5fr);
+    grid-template-columns: 140px minmax(120px, 1fr) minmax(160px, 1.5fr) 96px 118px 72px minmax(130px, 1.5fr);
     align-items: end;
     gap: 8px 16px;
   }

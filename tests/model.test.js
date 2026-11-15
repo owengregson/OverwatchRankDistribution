@@ -472,6 +472,109 @@ describe('ladder midpoints', () => {
   });
 });
 
+describe('the game\'s highest reading, 99%', () => {
+  // Rank screens only ever say "higher ranked than 99%" from the top 1% upwards.
+  const below = [
+    { rank: 'Diamond 5', betterThan: 84 },
+    { rank: 'Master 3', betterThan: 97 },
+    { rank: 'Master 2', betterThan: 98 },
+  ];
+  const mark = { rank: 'Grandmaster 5', betterThan: 99 };
+  const above = [
+    { rank: 'Grandmaster 3', betterThan: 99 },
+    { sr: 4659, betterThan: 99, weight: 3 },
+    { rank: 'Champion 1', betterThan: 99 },
+  ];
+  const SAMPLES = [0, 800, 2500, 3700, 4000, 4200, 4659, 4900, 4999];
+
+  for (const type of ['normal', 'freeform']) {
+    describe(`${type} curve`, () => {
+      const build = (datapoints) => buildSeasonModel({ model: type, datapoints }, ladder);
+      const marked = build([...below, mark]);
+      // Given out of order, to show it is the lowest that is kept and not the first.
+      const crowded = build([above[1], ...below, above[2], mark, above[0]]);
+
+      it('fits the lowest datapoint reading 99% and no other', () => {
+        expect(crowded.points.map((pt) => pt.counts)).toEqual([true, true, true, true, false, false, false]);
+        expect(crowded.points[3].label).toBe('Grandmaster 5');
+      });
+
+      it('is the same curve however many more read 99% above it', () => {
+        for (const sr of SAMPLES) {
+          expect(crowded.cdf(sr), `${sr} SR`).toBe(marked.cdf(sr));
+          expect(crowded.pdf(sr), `${sr} SR`).toBe(marked.pdf(sr));
+        }
+        expect(crowded.rmse).toBe(marked.rmse);
+      });
+
+      it('still counts every datapoint, and says what the curve makes of each', () => {
+        expect(crowded.points).toHaveLength(7);
+        for (const point of crowded.points.filter((pt) => !pt.counts)) {
+          expect(point.fitted).toBeGreaterThan(0.99);
+        }
+      });
+
+      it('is not the curve it would be if they were taken at their word', () => {
+        const literal = build([...below, mark, ...above.map((pt) => ({ ...pt, betterThan: 99.0001 }))]);
+        expect(literal.cdf(4200)).not.toBeCloseTo(marked.cdf(4200), 4);
+      });
+    });
+  }
+
+  it('carries on from the mark as a bell tail when the curve follows the data', () => {
+    const model = buildSeasonModel({ model: 'freeform', datapoints: [...below, mark, ...above] }, ladder);
+    // A bell curve is a straight line in z: from the mark up, each 100 SR adds the same z.
+    // (Short of the top division, where what lies past 5,000 SR is stacked.)
+    const z = (sr) => probit(model.cdf(sr));
+    const step = z(4100) - z(4000);
+    expect(step).toBeGreaterThan(0);
+    for (const sr of [4100, 4300, 4700]) expect(z(sr + 100) - z(sr)).toBeCloseTo(step, 6);
+  });
+
+  it('takes a figure above 99 with decimals as exact', () => {
+    const model = buildSeasonModel(season4, ladder);
+    expect(model.points.every((pt) => pt.counts)).toBe(true);
+    const points = buildSeasonModel(
+      { model: 'freeform', datapoints: [...below, mark, { rank: 'Grandmaster 1', betterThan: 99.7 }] },
+      ladder,
+    ).points;
+    expect(points.at(-1).counts).toBe(true);
+    expect(points.at(-1).fitted).toBeCloseTo(0.997, 9);
+  });
+
+  it('cannot make a curve from readings of 99% alone', () => {
+    const { model, error } = tryBuildSeasonModel({ datapoints: [mark, ...above] }, ladder);
+    expect(model).toBeNull();
+    expect(error.message).toMatch(/at least two/);
+  });
+});
+
+describe('roles', () => {
+  it('gives every bundled datapoint a role', () => {
+    for (const bundled of [season12, season17, season4, season]) {
+      for (const point of bundled.datapoints) {
+        expect(['tank', 'damage', 'support'], `${bundled.id} ${point.rank ?? point.sr}`).toContain(point.role);
+      }
+    }
+    expect(season.datapoints.every((point) => point.role === 'tank')).toBe(true);
+  });
+
+  it('keeps a datapoint\'s role with it, and it does not change the curve', () => {
+    const plain = buildSeasonModel({ datapoints: season.datapoints.map(({ role, ...point }) => point) }, ladder);
+    const model = buildSeasonModel(season, ladder);
+    expect(model.points.map((pt) => pt.role)).toEqual(['tank', 'tank']);
+    expect(model.cdf(2600)).toBe(plain.cdf(2600));
+  });
+
+  it('rejects a role that is not one of the three', () => {
+    const datapoints = [
+      { rank: 'Master 3', betterThan: 97, role: 'tank' },
+      { rank: 'Master 2', betterThan: 98, role: 'healer' },
+    ];
+    expect(() => buildSeasonModel({ datapoints }, ladder)).toThrow(/"role" must be/);
+  });
+});
+
 describe('icon sizing', () => {
   const sizing = createIconSizing(ladder, iconMetrics);
   const painted = (tier) => {

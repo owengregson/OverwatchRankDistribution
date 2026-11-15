@@ -61,22 +61,29 @@ export function buildSeasonModel(season, ladder) {
   const resolved = resolveDatapoints(season.datapoints, ladder);
   const lowest = ladder.divisions[0];
   const highest = ladder.divisions.at(-1);
-  const model = chosen.fit(resolved, {
-    minSr: ladder.minSr,
-    maxSr: ladder.maxSr,
-    floorWidth: lowest.maxSr - lowest.minSr,
-    ceilingWidth: highest.maxSr - highest.minSr,
-  });
+  // Whichever curve it is, it is fitted only to the datapoints that count: of those reading
+  // the game's highest figure, 99%, that is the lowest one alone (see HIGHEST_READING).
+  const model = chosen.fit(
+    resolved.filter((pt) => pt.counts),
+    {
+      minSr: ladder.minSr,
+      maxSr: ladder.maxSr,
+      floorWidth: lowest.maxSr - lowest.minSr,
+      ceilingWidth: highest.maxSr - highest.minSr,
+    },
+  );
 
   // Keep each datapoint alongside what the fitted curve says at the same SR,
-  // so the UI can show how well the model agrees with the data.
+  // so the UI can show how well the model agrees with the data. The miss is
+  // measured over the datapoints the curve was fitted to.
   const points = resolved.map((pt) => {
     const fitted = model.cdf(pt.sr);
     return { ...pt, fitted, residual: fitted - pt.p };
   });
-  const totalWeight = points.reduce((sum, pt) => sum + pt.weight, 0);
+  const counted = points.filter((pt) => pt.counts);
+  const totalWeight = counted.reduce((sum, pt) => sum + pt.weight, 0);
   const rmse = Math.sqrt(
-    points.reduce((sum, pt) => sum + pt.weight * pt.residual ** 2, 0) / totalWeight,
+    counted.reduce((sum, pt) => sum + pt.weight * pt.residual ** 2, 0) / totalWeight,
   );
 
   return { ...model, label: chosen.label, ...moments(model), points, rmse };

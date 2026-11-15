@@ -117,7 +117,7 @@ export function createLocalBackend(bundledSeasons) {
 
     listSeasons: operation(() => db.seasons),
 
-    submitDatapoint: operation(async ({ seasonId, rank, sr = null, betterThan, proof }) => {
+    submitDatapoint: operation(async ({ seasonId, rank, sr = null, role = null, betterThan, proof }) => {
       findSeason(seasonId);
       const proofPath = `${crypto.randomUUID()}.${proof.extension}`;
       db.proofs[proofPath] = await toDataUrl(proof.blob);
@@ -126,6 +126,7 @@ export function createLocalBackend(bundledSeasons) {
         seasonId,
         rank,
         sr,
+        role,
         betterThan,
         proofPath,
         status: 'pending',
@@ -164,15 +165,19 @@ export function createLocalBackend(bundledSeasons) {
     ),
 
     approveSubmission: operation(
-      (id, weight = 1) => {
+      (id, weight = 1, role = null) => {
         const submission = findSubmission(id);
         if (submission.status !== 'pending') throw new Error('That submission was already reviewed.');
+        // The role the reviewer chose, or else the one read off the screenshot.
+        const pointRole = role ?? submission.role ?? null;
+        if (!pointRole) throw new Error('Choose the role this rank is held in before approving it.');
         // A submission that says how far through the division it was becomes a datapoint at that exact SR.
         const exact = submission.sr !== null && submission.sr !== undefined;
         findSeason(submission.seasonId).datapoints.push({
           id: crypto.randomUUID(),
           ...(exact ? { sr: submission.sr } : { rank: submission.rank }),
           betterThan: submission.betterThan,
+          role: pointRole,
           weight,
           note: exact ? `Community submission (${submission.rank})` : 'Community submission',
         });

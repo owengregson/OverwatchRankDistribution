@@ -7,11 +7,11 @@
   "ladder": "classic",
   "older": true,
   "datapoints": [
-    { "rank": "Silver 5", "betterThan": 2.4, "note": "Official Season 17 graph" },
-    { "rank": "Gold 5", "betterThan": 15, "note": "Official Season 17 graph" },
-    { "rank": "Platinum 5", "betterThan": 46.7, "note": "Official Season 17 graph" },
-    { "rank": "Diamond 5", "betterThan": 81.6, "note": "Official Season 17 graph" },
-    { "rank": "Master 5", "betterThan": 96.5, "note": "Official Season 17 graph" },
-    { "rank": "Grandmaster 5", "betterThan": 99.7, "note": "Official Season 17 graph" }
+    { "rank": "Silver 5", "betterThan": 2.4, "role": "support", "note": "Official Season 17 graph" },
+    { "rank": "Gold 5", "betterThan": 15, "role": "support", "note": "Official Season 17 graph" },
+    { "rank": "Platinum 5", "betterThan": 46.7, "role": "support", "note": "Official Season 17 graph" },
+    { "rank": "Diamond 5", "betterThan": 81.6, "role": "damage", "note": "Official Season 17 graph" },
+    { "rank": "Master 5", "betterThan": 96.5, "role": "tank", "note": "Official Season 17 graph" },
+    { "rank": "Grandmaster 5", "betterThan": 99.7, "role": "support", "note": "Official Season 17 graph" }
   ]
 }

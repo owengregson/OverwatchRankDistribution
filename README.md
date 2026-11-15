@@ -66,11 +66,13 @@ Seasons live in `src/data/seasons/*.json`:
   "name": "2026: Season 5",
   "model": "normal",
   "datapoints": [
-    { "rank": "Master 3", "betterThan": 97 },
-    { "sr": 3800, "betterThan": 98, "weight": 2, "note": "optional" }
+    { "rank": "Master 3", "betterThan": 97, "role": "tank" },
+    { "sr": 3800, "betterThan": 98, "role": "support", "weight": 2, "note": "optional" }
   ]
 }
 ```
+
+`role` is the role the figure is for: `tank`, `damage` or `support`. It is kept with the datapoint and does not change the curve.
 
 | Optional field | Effect |
 | --- | --- |
@@ -81,7 +83,7 @@ Seasons live in `src/data/seasons/*.json`:
 <img src="docs/readme/section-submissions.png" alt="03 Submissions" width="100%">
 
 1. **Drop a screenshot** of the game's rank screen on `/#/submit`.
-2. **It is read on your device.** Rank, rank progress and "higher ranked than" fill in the form. Nothing is uploaded until you send it.
+2. **It is read on your device.** Rank, rank progress and "higher ranked than" fill in the form, and the role is noted without asking. Nothing is uploaded until you send it.
 3. **An admin approves it** and the curve refits.
 
 The reader is Tesseract in WebAssembly, served by the site itself. It reads the English game client. Anything it misses, you type.

@@ -7,8 +7,12 @@
  * light background and read again on its own, and each number a third time
  * with only digits allowed. A number is taken when the readings agree; when
  * they do not, the closest look is kept and the field is marked unsure.
+ *
+ * It also notes the role the rank is held in ("TANK", written over the
+ * rank's emblem). Nobody is shown that or asked to check it, so it is
+ * simply left out when it cannot be read.
  */
-import { parseRankScreen, readBetterThan, readNumber, readProgress, readRank, settle } from './parse.js';
+import { findRole, parseRankScreen, readBetterThan, readNumber, readProgress, readRank, settle } from './parse.js';
 import { recognise, stopRecognising, warmUp } from './ocr.js';
 
 /** Starts the text reader before there is anything to read, so the first screenshot does not wait for it. */
@@ -37,6 +41,21 @@ const FIELDS = ['rank', 'progress', 'betterThan'];
 const BAND = 1.2;
 /** Height (px) a cut-out line is enlarged to. */
 const LINE_HEIGHT = 96;
+/**
+ * Where the role is looked for when the first pass walked past it: boxes
+ * measured from the top of the rank's line and its middle, in screen
+ * heights (the game lays this screen out by the height of the window).
+ * `up` is how far above the rank a box starts and ends, `across` how far it
+ * reaches to each side, `height` the height (px) it is enlarged to.
+ *
+ * The first is a close cut around where the role is written, just over the
+ * emblem. The second is everything above the rank, for a screenshot that
+ * was cropped or is laid out differently.
+ */
+const ROLE_LOOKS = [
+  { up: [0.51, 0.4], across: 0.2, height: 300, layout: 'block', filter: true },
+  { up: [Infinity, 0], across: 0.45, height: 0, layout: 'scattered', filter: false },
+];
 /** Margin (px) kept around a cut-out, so letters are not touching its edge. */
 const MARGIN = 14;
 
@@ -89,14 +108,19 @@ async function searchBand(screen, progressLine, ladder) {
   return parseRankScreen(lines, ladder).betterThan;
 }
 
-/** The first pass: where the rank, the progress and the "higher ranked than" lines are, and what they seem to say. */
+/**
+ * The first pass: where the rank, the progress and the "higher ranked than"
+ * lines are, and what they seem to say. `lines` is every line it read on
+ * the way, for the role to be looked for among them.
+ */
 async function locate(screen, ladder) {
-  const found = { rank: null, progress: null, betterThan: null };
+  const found = { rank: null, progress: null, betterThan: null, lines: [] };
   const complete = () => FIELDS.every((field) => found[field]);
 
   for (const { edge, layout } of LOOKS) {
     const view = edge === SCREEN_EDGE ? screen : resized(screen, edge);
     const lines = inScreenPixels(await recognise(view, { layout }), screen.width / view.width);
+    found.lines.push(...lines);
     const seen = parseRankScreen(lines, ladder);
     for (const field of FIELDS) found[field] ??= seen[field];
     if (complete()) return found;
@@ -107,6 +131,46 @@ async function locate(screen, ladder) {
     }
   }
   return found;
+}
+
+/**
+ * The role, from the lines the first pass read. If it is not among them,
+ * the screen over the rank is read again, a close cut first and then all
+ * of it. Without a rank there is nothing to measure from, so the role is
+ * only taken when it is the one role named anywhere on the screen.
+ */
+async function role(screen, first) {
+  const rankLine = first.rank?.line;
+  const seen = findRole(first.lines, rankLine);
+  if (seen || !rankLine) return seen;
+
+  const { x0, x1, y0 } = rankLine.bbox;
+  const middle = (x0 + x1) / 2;
+  for (const { up, across, height, layout, filter } of ROLE_LOOKS) {
+    const left = Math.max(0, middle - across * screen.height);
+    const top = Math.max(0, y0 - up[0] * screen.height);
+    const cutWidth = Math.min(screen.width, middle + across * screen.height) - left;
+    const cutHeight = y0 - up[1] * screen.height - top;
+    if (cutWidth < 1 || cutHeight < 1) continue;
+    const scale = Math.max(1, Math.min(3, height / cutHeight));
+
+    const cut = document.createElement('canvas');
+    cut.width = Math.round(cutWidth * scale);
+    cut.height = Math.round(cutHeight * scale);
+    const ctx = cut.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
+    if (filter) ctx.filter = AS_PRINT;
+    ctx.drawImage(screen, left, top, cutWidth, cutHeight, 0, 0, cut.width, cut.height);
+
+    try {
+      const found = findRole(await recognise(cut, { layout }));
+      if (found) return found;
+    } catch {
+      // Not worth failing the whole reading over.
+      return null;
+    }
+  }
+  return null;
 }
 
 /** Cuts a box out of the screen, enlarged, as dark text on a light background. */
@@ -152,8 +216,10 @@ async function number(screen, found, read) {
  * @returns {Promise<{
  *   tier: object | null, number: number | null,
  *   progress: number | null, betterThan: number | null,
+ *   role: string | null,
  *   unsure: ('rank' | 'progress' | 'betterThan')[]
- * }>} what could be read; `unsure` lists the fields whose readings disagreed
+ * }>} what could be read; `role` is a role id from src/data/roles.js;
+ *     `unsure` lists the fields whose readings disagreed
  */
 export async function readRankScreen(file, ladder) {
   const bitmap = await createImageBitmap(file);
@@ -171,6 +237,7 @@ export async function readRankScreen(file, ladder) {
   }
   const progress = await number(screen, first.progress, readProgress);
   const betterThan = await number(screen, first.betterThan, readBetterThan);
+  const heldIn = await role(screen, first);
 
   const unsure = [];
   if (rankDisputed) unsure.push('rank');
@@ -182,6 +249,7 @@ export async function readRankScreen(file, ladder) {
     number: rank?.number ?? null,
     progress: progress?.value ?? null,
     betterThan: betterThan?.value ?? null,
+    role: heldIn,
     unsure,
   };
 }

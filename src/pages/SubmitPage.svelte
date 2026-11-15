@@ -66,6 +66,12 @@
   let flags = $state({});
   /** Counts readings, so one that finishes after its image was replaced or removed is ignored. */
   let readRun = 0;
+  /**
+   * The role the rank is held in (a role id from data/roles.js), as read
+   * off the screenshot, or null. It is sent with the submission and never
+   * shown: whoever reviews it has the screenshot to check it against.
+   */
+  let role = null;
 
   let errors = $state({});
   let sending = $state(false);
@@ -119,6 +125,7 @@
     errors.proof = '';
     const run = ++readRun;
     flags = {};
+    role = null;
     if (!file) {
       reading = 'none';
       return;
@@ -139,6 +146,7 @@
     }
     if (run !== readRun) return;
 
+    role = result?.role ?? null;
     const found = [];
     if (result?.tier && result.number) {
       tierId = result.tier.id;
@@ -232,7 +240,7 @@
 
     sending = true;
     try {
-      await backend.submitDatapoint({ seasonId: season.id, rank: rankName, sr, betterThan, proof });
+      await backend.submitDatapoint({ seasonId: season.id, rank: rankName, sr, role, betterThan, proof });
       sent = true;
     } catch (error) {
       failure = error.message;
@@ -245,6 +253,7 @@
     readRun += 1;
     reading = 'none';
     flags = {};
+    role = null;
     betterThan = null;
     progress = STARTING_PROGRESS;
     proof = null;

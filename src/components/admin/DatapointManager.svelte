@@ -20,6 +20,12 @@
     [...season.datapoints].sort((a, b) => (srOf(a, ladder) ?? 0) - (srOf(b, ladder) ?? 0)),
   );
   const median = $derived(fit.model?.quantile(0.5));
+  /**
+   * Ids of the datapoints the curve is not fitted to: those reading the
+   * game's highest figure, 99%, above the lowest that does (see
+   * HIGHEST_READING in lib/model/datapoints.js).
+   */
+  const leftOut = $derived(new Set(fit.model?.points.filter((pt) => !pt.counts).map((pt) => pt.id)));
 </script>
 
 <div class="toolbar">
@@ -55,12 +61,17 @@
   {/if}
 </div>
 
-<p class="hint">Each badge is a datapoint, lowest rank first. Open one to see and edit it; the last tile adds one.</p>
+<p class="hint">
+  Each badge is a datapoint, lowest rank first. Open one to see and edit it; the last tile adds one.
+  {#if leftOut.size}
+    A faded badge reads 99% above the lowest datapoint that does, so the curve is not fitted to it.
+  {/if}
+</p>
 
 <!-- Closed tiles pack into rows; an open one takes a row to itself (see DatapointTile). -->
 <div class="points">
   {#each points as point (point.id ?? `${point.rank ?? point.sr}-${point.betterThan}`)}
-    <DatapointTile seasonId={season.id} {ladder} {point} model={fit.model} />
+    <DatapointTile seasonId={season.id} {ladder} {point} model={fit.model} counts={!leftOut.has(point.id)} />
   {/each}
 
   <DatapointTile seasonId={season.id} {ladder} />

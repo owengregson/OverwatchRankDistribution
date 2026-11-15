@@ -12,6 +12,10 @@ A season is a list of datapoints: a rank (or an exact SR) and the percentage of 
   - It reproduces its source, roughness included: figures rounded to one decimal place give a curve with small bumps where the rounding falls. Bronze divisions are wider than the rest on the SR scale, so a season with datapoints inside Bronze has fewer players per SR there and the curve climbs quickly across the Bronze boundary.
   - Weights only settle disagreements: datapoints at the same SR are averaged by weight, and two that contradict each other (a higher rank, a lower percentage) are averaged into one point between them.
 
+**The top 1%.** The game's "higher ranked than" line is in whole percents and stops at 99, so every player in the top 1% reads 99% wherever in it they are. A datapoint of exactly 99 therefore only says "in the top 1%". The lowest of them marks where the top 1% begins, and the curve is fitted to it as 99%. Any others higher up are kept but no curve is fitted to them, whichever `model` the season uses: from the mark upwards the curve is the bell tail that carries on from the datapoints below it. A figure above 99 with decimals (99.3, from a published distribution) is exact and counts like any other. The rule is `HIGHEST_READING` in `src/lib/model/datapoints.js`, applied in `buildSeasonModel` before any fitter sees the datapoints; the admin panel fades the datapoints it leaves out.
+
+**Roles.** Every datapoint has a `role`, the role its figure is for: `tank`, `damage` or `support` (`src/data/roles.js`). It is kept with the datapoint and does not change the curve.
+
 The code is in `src/lib/model`. `buildSeasonModel(season, ladder)` returns `cdf`, `pdf` and `quantile` functions, plus the curve's `mean` and `sd`, and everything on screen is derived from those; nothing outside the fitters knows which curve a season uses. To add another, write a fitter with the same return shape as `fitNormal.js` and register it in `buildSeasonModel.js`.
 
 A published breakdown is turned into datapoints by adding up its shares from the bottom, exactly as published: the datapoint for a rank is the total of everything below it (2026 Season 4 was made this way).
@@ -20,8 +24,8 @@ A published breakdown is turned into datapoints by adding up its shares from the
 
 Day to day, use the admin panel at `/#/admin`:
 
-- **Review queue**: pending submissions, each shown with its rank and exact SR next to what the current curve says there, with the screenshot. Approve (optionally with a weight) or deny.
-- **Datapoints**: every datapoint behind a season, as a grid of rank badges. Open one to edit or delete it, or the last tile to add one, and see the fit update. Where a datapoint sits is set with three controls: the rank (a dropdown), the division (a slider, 5 to 1) and the percent through that division (a slider, 0 to 99, the game's rank progress). At 0% it is stored as the rank, above that as the exact SR.
+- **Review queue**: pending submissions, each shown with its rank and exact SR next to what the current curve says there, with the screenshot. Approve (optionally with a weight) or deny. Each has a role dropdown, set to the role read off the screenshot; check it against the screenshot and change it if it is wrong. One whose role could not be read says "Not read" and cannot be approved until a role is chosen.
+- **Datapoints**: every datapoint behind a season, as a grid of rank badges. Open one to edit or delete it, or the last tile to add one, and see the fit update. Where a datapoint sits is set with three controls: the rank (a dropdown), the division (a slider, 5 to 1) and the percent through that division (a slider, 0 to 99, the game's rank progress). At 0% it is stored as the rank, above that as the exact SR. Its role is a dropdown beside them.
 - **Seasons**: add, rename or delete seasons, and choose the ladder each was played on, the curve fitted to it (bell curve, or following the data) and where it is in the header for every visitor: a tab of its own, or in the "Older Seasons" menu. A new season stays hidden from visitors until it has enough datapoints for a curve.
 
 The admin panel is linked from a card under the three steps on the submit page. The card is out of sight until the pointer rests on its place for a second, and goes again five seconds after the pointer leaves it.
@@ -46,6 +50,8 @@ The submit page (`/#/submit`) starts with a screenshot of the game's rank screen
 
 The visitor checks the details, corrects anything misread, and sends it. Whatever could not be read is left for them to fill in.
 
+It also reads **the role** the rank is held in, which the game writes over the rank's emblem ("TANK"). The visitor is not shown it or asked about it: it is sent with the submission, and whoever reviews it sees it beside the screenshot. If the first pass over the screen walked past it, the screen above the rank is read again for it, a close cut first and then all of it.
+
 The reading is done by Tesseract, compiled to WebAssembly, in `src/lib/screenshot`: `ocr.js` runs the engine, `readRankScreen.js` looks at the screen (the whole of it first, then each line it found on its own, and each number once more with only digits allowed, keeping a number when the readings agree), and `parse.js` picks the three facts out of the text and is the part with tests. The engine and its English data are about 7 MB. They are served by this site, never fetched from another server. So that nobody waits for them with a screenshot in hand, every page downloads them in the background once it has opened (after the loading screen, never as part of it), and the submit page starts the engine from them as soon as it is shown. The engine only runs, and only holds memory, while the submit page is open. `scripts/ocrData.js` is the small Vite plugin that puts the data file at a fixed address (`ocr/eng.traineddata.gz`).
 
 It reads the English game client. In another language the form is simply left to fill in by hand.
@@ -53,6 +59,8 @@ It reads the English game client. In another language the form is simply left to
 ## The database
 
 The site is static files, so it can be hosted on GitHub Pages. Submissions, approvals and the live datapoints are stored in a Supabase project that the page talks to directly. What each visitor may do is enforced by the database's row-level security, not by the page. `supabase/schema.sql` creates the tables, the security rules, the private bucket for screenshots, and the first season; it is safe to run again and only adds what is missing.
+
+A database made before submissions and datapoints carried a role needs `supabase/schema.sql` run again before the site that sends roles is published: until then a submission is refused, because the `role` column it sets does not exist. Running it adds the columns and, that once, gives the datapoints already there a role: tank for 2026 Season 5, and one of the three at random for the other seasons, whose datapoints were a mix with no record of which was which.
 
 ## Where things are
 
@@ -65,9 +73,10 @@ supabase/schema.sql        database tables and security rules
 src/
   config.js                database connection, author link
   data/ladder.js           the ladders: each one's tiers and SR ranges, plus tier colours, icons, light effects
+  data/roles.js            the roles a datapoint can be for
   data/seasons/            bundled seasons
   lib/model/               datapoints → fitted curve → readings
-  lib/screenshot/          reads the rank, rank progress and percentage off a screenshot, in the browser
+  lib/screenshot/          reads the rank, rank progress, percentage and role off a screenshot, in the browser
   lib/ladder/              tiers and divisions, rank-name parsing, rank progress
   lib/backend/             storage: Supabase, local stand-in, read-only
   lib/state/               app state (season, model, cursor, pins), the opening sequence

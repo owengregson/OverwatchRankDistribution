@@ -3,11 +3,13 @@ import { ladderById } from '../src/lib/ladder/ladders.js';
 import { MAX_PROGRESS, progressAt, srAt } from '../src/lib/ladder/progress.js';
 import {
   editDistance,
+  findRole,
   parseRankScreen,
   readBetterThan,
   readNumber,
   readProgress,
   readRank,
+  readRole,
   settle,
 } from '../src/lib/screenshot/parse.js';
 
@@ -163,6 +165,56 @@ describe('reading a whole screen', () => {
       progress: null,
       betterThan: null,
     });
+  });
+});
+
+describe('reading the role', () => {
+  /** A recognised line with its words where they were on the screen: [text, x0, y0, x1, y1] each. */
+  const placed = (...words) => ({
+    text: words.map(([text]) => text).join(' '),
+    bbox: { x0: words[0][1], y0: words[0][2], x1: words.at(-1)[3], y1: words.at(-1)[4] },
+    words: words.map(([text, x0, y0, x1, y1]) => ({ text, bbox: { x0, y0, x1, y1 } })),
+  });
+  // Where the text reader finds them on the game's rank screen, 2400 pixels wide.
+  const rank = placed(['CHEMPION', 1160, 923, 1340, 990], ['4', 1360, 923, 1400, 990]);
+  const tank = placed(['@®', 1205, 284, 1240, 321], ['TANK', 1250, 284, 1341, 321]);
+
+  it('knows the three roles by name', () => {
+    expect(readRole('TANK')).toBe('tank');
+    expect(readRole('Damage')).toBe('damage');
+    expect(readRole('SUPPORT')).toBe('support');
+    expect(readRole('CHAMPION')).toBeNull();
+    expect(readRole('')).toBeNull();
+  });
+
+  it('forgives a misread letter in the long names, and the icon read as part of the word', () => {
+    expect(readRole('DANAGE')).toBe('damage');
+    expect(readRole('SUPP0RT')).toBe('support');
+    expect(readRole('®TANK')).toBe('tank');
+    expect(readRole('OTANK')).toBe('tank');
+    // One letter from "TANK", and on every rank screen.
+    expect(readRole('RANK')).toBeNull();
+    expect(readRole('DXMXGE')).toBeNull();
+  });
+
+  it('finds the role written over the rank', () => {
+    expect(findRole([tank, rank], rank)).toBe('tank');
+    // Read as part of a longer line, as happens when the screen is read as a page.
+    const merged = placed(['®', 1131, 275, 1160, 310], ['SUPPORT', 1170, 275, 1300, 310], ['Wins', 1577, 280, 1640, 305]);
+    expect(findRole([merged, rank], rank)).toBe('support');
+  });
+
+  it('ignores a role named anywhere else on the screen', () => {
+    const elsewhere = placed(['TANK', 2188, 611, 2260, 628], ['HERO', 2270, 611, 2326, 628]);
+    const below = placed(['DAMAGE', 1200, 1190, 1340, 1220]);
+    expect(findRole([elsewhere, below, rank], rank)).toBeNull();
+    expect(findRole([elsewhere, below, tank, rank], rank)).toBe('tank');
+  });
+
+  it('without a rank to measure from, takes the role only when it is the one role named', () => {
+    expect(findRole([tank])).toBe('tank');
+    expect(findRole([tank, placed(['DAMAGE', 100, 100, 200, 130])])).toBeNull();
+    expect(findRole([placed(['PLAY', 0, 0, 50, 20], ['OF', 60, 0, 80, 20])])).toBeNull();
   });
 });
 

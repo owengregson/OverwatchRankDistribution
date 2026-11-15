@@ -29,6 +29,8 @@ export function createSupabaseBackend({ url, anonKey }) {
     id: row.id,
     ...(row.rank ? { rank: row.rank } : { sr: row.sr }),
     betterThan: Number(row.better_than),
+    // Left out by a database that has not yet been given the column (run supabase/schema.sql again).
+    ...(row.role ? { role: row.role } : {}),
     weight: Number(row.weight),
     note: row.note ?? '',
   });
@@ -49,6 +51,7 @@ export function createSupabaseBackend({ url, anonKey }) {
     seasonId: row.season_id,
     rank: row.rank,
     sr: row.sr ?? null,
+    role: row.role ?? null,
     betterThan: Number(row.better_than),
     proofPath: row.proof_path,
     status: row.status,
@@ -69,15 +72,13 @@ export function createSupabaseBackend({ url, anonKey }) {
 
     async listSeasons() {
       const client = await getClient();
-      // Every column of a season, not a list of them: a database that has not yet been given
-      // a newer column (run supabase/schema.sql again) still loads, without that field.
-      const rows = unwrap(
-        await client.from('seasons').select('*, datapoints(id, rank, sr, better_than, weight, note)'),
-      );
+      // Every column of a season and of a datapoint, not a list of them: a database that has not yet
+      // been given a newer column (run supabase/schema.sql again) still loads, without that field.
+      const rows = unwrap(await client.from('seasons').select('*, datapoints(*)'));
       return rows.map(toSeason);
     },
 
-    async submitDatapoint({ seasonId, rank, sr, betterThan, proof }) {
+    async submitDatapoint({ seasonId, rank, sr, role, betterThan, proof }) {
       const client = await getClient();
 
       // The screenshot goes to private storage first; the submission then points at it.
@@ -89,9 +90,14 @@ export function createSupabaseBackend({ url, anonKey }) {
 
       // No .select(): visitors may add a submission but not read it back.
       unwrap(
-        await client
-          .from('submissions')
-          .insert({ season_id: seasonId, rank, sr: sr ?? null, better_than: betterThan, proof_path: proofPath }),
+        await client.from('submissions').insert({
+          season_id: seasonId,
+          rank,
+          sr: sr ?? null,
+          role: role ?? null,
+          better_than: betterThan,
+          proof_path: proofPath,
+        }),
       );
     },
 
@@ -133,10 +139,10 @@ export function createSupabaseBackend({ url, anonKey }) {
       return data.signedUrl;
     },
 
-    async approveSubmission(id, weight = 1) {
+    async approveSubmission(id, weight = 1, role = null) {
       const client = await getClient();
       // One database function, so the datapoint and the status change land together.
-      unwrap(await client.rpc('approve_submission', { submission: id, point_weight: weight }));
+      unwrap(await client.rpc('approve_submission', { submission: id, point_weight: weight, point_role: role }));
     },
 
     async denySubmission(id) {
@@ -163,6 +169,7 @@ export function createSupabaseBackend({ url, anonKey }) {
         rank: datapoint.rank ?? null,
         sr: datapoint.sr ?? null,
         better_than: datapoint.betterThan,
+        role: datapoint.role,
         weight: datapoint.weight ?? 1,
         note: datapoint.note || null,
       };

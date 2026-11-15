@@ -1,7 +1,8 @@
 /**
- * Picks the three facts a datapoint needs out of the text read off a
- * rank screen (the game's rank-up or rank progress screen):
+ * Picks the facts a datapoint needs out of the text read off a rank screen
+ * (the game's rank-up or rank progress screen):
  *
+ *   TANK                                    the role the rank is held in
  *   CHAMPION 4                              the rank
  *   RANK PROGRESS: 59%                      how far through that division
  *   HIGHER RANKED THAN 99% OF PLAYERS       the share of players it beats
@@ -10,6 +11,7 @@
  * the words are matched loosely and the numbers strictly. Nothing here
  * touches an image; see readRankScreen.js for that.
  */
+import { ROLES } from '../../data/roles.js';
 
 /** Number of single-letter changes (add, drop, swap) that turn `a` into `b`. */
 export function editDistance(a, b) {
@@ -60,6 +62,48 @@ export function readRank(text, ladder) {
     }
   }
   return best;
+}
+
+/**
+ * The role a single word spells: "TANK", "DAMAGE" or "SUPPORT". The two
+ * long names may have one letter misread. Anything in front of the name is
+ * let go, because the icon beside it is often read as a stray letter.
+ * @returns {string | null} a role id from src/data/roles.js
+ */
+export function readRole(word) {
+  const letters = String(word).toUpperCase().replace(/[^A-Z]/g, '');
+  for (const role of ROLES) {
+    const name = role.name.toUpperCase();
+    if (letters.length >= name.length && letters.endsWith(name)) return role.id;
+    if (name.length >= 6 && editDistance(letters, name) <= 1) return role.id;
+  }
+  return null;
+}
+
+/**
+ * The role named on a recognised screen, or null if none is, or more than
+ * one.
+ *
+ * The game writes the role over the rank's emblem. So when the line the
+ * rank was read from is given, only words above that line and in line with
+ * it are looked at: a hero called a tank somewhere else on the screen is
+ * not the role.
+ *
+ * @param {{ words: { text: string, bbox: object }[] }[]} lines
+ * @param {{ bbox: object } | null} rankLine
+ * @returns {string | null} a role id from src/data/roles.js
+ */
+export function findRole(lines, rankLine = null) {
+  const over = rankLine?.bbox;
+  const seen = new Set();
+  for (const line of lines) {
+    for (const word of line.words) {
+      if (over && !(word.bbox.y1 <= over.y0 && word.bbox.x0 < over.x1 && word.bbox.x1 > over.x0)) continue;
+      const role = readRole(word.text);
+      if (role) seen.add(role);
+    }
+  }
+  return seen.size === 1 ? [...seen][0] : null;
 }
 
 /** "12", "12.5" or "12,5" as a number. */

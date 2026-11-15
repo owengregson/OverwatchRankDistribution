@@ -7,12 +7,12 @@
   "ladder": "classic",
   "older": true,
   "datapoints": [
-    { "rank": "Silver 5", "betterThan": 4.6, "note": "Season 12 tier cut-offs" },
-    { "rank": "Gold 5", "betterThan": 24.8, "note": "Season 12 tier cut-offs" },
-    { "rank": "Platinum 5", "betterThan": 61.47, "note": "Season 12 tier cut-offs" },
-    { "rank": "Diamond 5", "betterThan": 88.4, "note": "Season 12 tier cut-offs" },
-    { "rank": "Master 5", "betterThan": 97.79, "note": "Season 12 tier cut-offs" },
-    { "rank": "Grandmaster 5", "betterThan": 99.72, "note": "Season 12 tier cut-offs" },
-    { "rank": "Champion 5", "betterThan": 99.99, "note": "Season 12 tier cut-offs; taken as the top 0.01%, which a Grandmaster share of 0.27% implies" }
+    { "rank": "Silver 5", "betterThan": 4.6, "role": "support", "note": "Season 12 tier cut-offs" },
+    { "rank": "Gold 5", "betterThan": 24.8, "role": "damage", "note": "Season 12 tier cut-offs" },
+    { "rank": "Platinum 5", "betterThan": 61.47, "role": "tank", "note": "Season 12 tier cut-offs" },
+    { "rank": "Diamond 5", "betterThan": 88.4, "role": "damage", "note": "Season 12 tier cut-offs" },
+    { "rank": "Master 5", "betterThan": 97.79, "role": "tank", "note": "Season 12 tier cut-offs" },
+    { "rank": "Grandmaster 5", "betterThan": 99.72, "role": "tank", "note": "Season 12 tier cut-offs" },
+    { "rank": "Champion 5", "betterThan": 99.99, "role": "support", "note": "Season 12 tier cut-offs; taken as the top 0.01%, which a Grandmaster share of 0.27% implies" }
   ]
 }
