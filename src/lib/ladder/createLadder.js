@@ -86,11 +86,6 @@ export function createLadder(config) {
     tiers,
     divisions,
     divisionIcon: config.divisionIcon,
-    /** Shared canvas that every tier icon is drawn against, in source pixels. */
-    iconCanvas: {
-      width: Math.max(...tiers.map((t) => t.icon.width)),
-      height: Math.max(...tiers.map((t) => t.icon.height)),
-    },
     divisionAt,
     tierAt: (sr) => divisionAt(sr).tier,
     parseRank,

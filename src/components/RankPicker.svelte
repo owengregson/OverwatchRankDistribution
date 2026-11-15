@@ -7,7 +7,7 @@
   import RankBadge from '@/components/RankBadge.svelte';
   import { ladder } from '@/lib/state/app.svelte.js';
 
-  let { tier, number, onpick, iconSize = 26 } = $props();
+  let { tier, number, onpick, iconSize = 30 } = $props();
 </script>
 
 <div class="rank-picker" style:--color={tier.color}>

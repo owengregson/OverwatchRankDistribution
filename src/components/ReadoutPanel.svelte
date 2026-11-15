@@ -64,7 +64,7 @@
 
 <style>
   .readout {
-    --badge-size: 88px;
+    --badge-size: 108px;
     display: grid;
     gap: 10px;
     padding: 15px 20px 12px;
@@ -226,7 +226,7 @@
   /* Short screens: shrink the badge and drop the least essential row. */
   @media (max-height: 800px) {
     .readout {
-      --badge-size: 68px;
+      --badge-size: 84px;
       gap: 9px;
     }
 

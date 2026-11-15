@@ -118,7 +118,7 @@
 
         <div class="field">
           <span class="label">Rank</span>
-          <RankPicker {tier} {number} iconSize={34} onpick={(t, n) => ((tier = t), (number = n))} />
+          <RankPicker {tier} {number} iconSize={42} onpick={(t, n) => ((tier = t), (number = n))} />
         </div>
 
         <label class="field">
@@ -170,7 +170,7 @@
     <section class="panel preview rise" style:--i={1} aria-label="Preview">
       <p class="eyebrow">Your datapoint</p>
       <div class="claim">
-        <RankBadge {tier} division={number} size={96} />
+        <RankBadge {tier} division={number} size={118} />
         <div>
           <div class="display rank">{rankName}</div>
           <p class="sentence">

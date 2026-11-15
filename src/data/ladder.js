@@ -10,36 +10,37 @@
  * `glow` is the light effect behind the icon, as in game: metal tiers have
  * none, then 'soft', 'radiant', 'flare' and 'blaze' (see RankAura.svelte).
  *
- * `icon.width` / `icon.height` are the pixel sizes of the cropped artwork in
- * `assets/images`. The crops all come from the same canvas, so RankBadge uses
- * these numbers to draw every icon at one shared scale. Update them if an
- * image is replaced.
+ * `icon` is the tier's image in `assets/images`. The images vary in shape
+ * and scale; their sizes are measured, not written here. After adding or
+ * replacing one, run `node scripts/measure-icons.mjs` so every rank is
+ * drawn at the same visual size (see src/lib/ladder/iconSizing.js).
  */
 export const LADDER_CONFIG = {
   maxSr: 5000,
   divisionsPerTier: 5,
-  divisionIcon: { file: (number) => `Division_${number}.png`, width: 174, height: 80 },
+  /** The plate image for a division number. */
+  divisionIcon: (number) => `Division_${number}.png`,
   tiers: [
     {
       id: 'bronze',
       name: 'Bronze',
       minSr: 0,
       color: '#ce7a54',
-      icon: { file: 'Rank_Bronze_c.png', width: 422, height: 357 },
+      icon: 'Rank_Bronze_c.png',
     },
     {
       id: 'silver',
       name: 'Silver',
       minSr: 1000,
       color: '#c6c8ca',
-      icon: { file: 'Rank_Silver_c.png', width: 346, height: 417 },
+      icon: 'Rank_Silver_c.png',
     },
     {
       id: 'gold',
       name: 'Gold',
       minSr: 1500,
       color: '#daa73e',
-      icon: { file: 'Rank_Gold_c.png', width: 388, height: 422 },
+      icon: 'Rank_Gold_c.png',
     },
     {
       id: 'platinum',
@@ -47,7 +48,7 @@ export const LADDER_CONFIG = {
       aliases: ['plat'],
       minSr: 2000,
       color: '#98d9ba',
-      icon: { file: 'Rank_Platinum_c.png', width: 389, height: 419 },
+      icon: 'Rank_Platinum_c.png',
     },
     {
       id: 'emerald',
@@ -55,7 +56,7 @@ export const LADDER_CONFIG = {
       minSr: 2500,
       color: '#00d87f',
       glow: 'soft',
-      icon: { file: 'Rank_Emerald_c.png', width: 382, height: 418 },
+      icon: 'Rank_Emerald_c.png',
     },
     {
       id: 'diamond',
@@ -63,7 +64,7 @@ export const LADDER_CONFIG = {
       minSr: 3000,
       color: '#5d9ef2',
       glow: 'soft',
-      icon: { file: 'Rank_Diamond_c.png', width: 431, height: 408 },
+      icon: 'Rank_Diamond_c.png',
     },
     {
       id: 'master',
@@ -72,7 +73,7 @@ export const LADDER_CONFIG = {
       minSr: 3500,
       color: '#8ae956',
       glow: 'radiant',
-      icon: { file: 'Rank_Master_c.png', width: 432, height: 348 },
+      icon: 'Rank_Master_c.png',
     },
     {
       id: 'grandmaster',
@@ -81,7 +82,7 @@ export const LADDER_CONFIG = {
       minSr: 4000,
       color: '#8b6ffc',
       glow: 'flare',
-      icon: { file: 'Rank_Grandmaster_c.png', width: 430, height: 273 },
+      icon: 'Rank_Grandmaster_c.png',
     },
     {
       id: 'champion',
@@ -90,7 +91,7 @@ export const LADDER_CONFIG = {
       minSr: 4500,
       color: '#cd7dfc',
       glow: 'blaze',
-      icon: { file: 'Rank_Champion_c.png', width: 430, height: 313 },
+      icon: 'Rank_Champion_c.png',
     },
   ],
 };

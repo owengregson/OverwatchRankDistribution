@@ -11,9 +11,9 @@
   const shares = $derived(tierShares(app.model, ladder));
   const activeId = $derived(app.reading.tier.id);
 
-  // A standard tier is a tenth of the axis; keep icons inside their column.
+  // A standard tier is a tenth of the axis; keep the widest icon inside its column.
   const columnWidth = $derived(((plotWidth - padding.left - padding.right) * 500) / ladder.maxSr);
-  const iconSize = $derived(clamp(columnWidth * 0.62, 20, 60));
+  const iconSize = $derived(clamp(columnWidth * 0.76, 24, 74));
   const compact = $derived(columnWidth < 64);
 
   function visit(tier) {

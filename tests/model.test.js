@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import iconMetrics from '../src/data/iconMetrics.json';
 import { LADDER_CONFIG } from '../src/data/ladder.js';
 import season from '../src/data/seasons/2026-season-5.json';
 import { createLadder } from '../src/lib/ladder/createLadder.js';
+import { createIconSizing } from '../src/lib/ladder/iconSizing.js';
 import { cdf, probit } from '../src/lib/math/normal.js';
 import { buildSeasonModel, tryBuildSeasonModel } from '../src/lib/model/buildSeasonModel.js';
 import { compareReadings, readAt, tierShares } from '../src/lib/model/reading.js';
@@ -161,5 +163,34 @@ describe('ladder midpoints', () => {
     expect(ladder.parseRank('Master 3').midSr).toBe(3750);
     expect(ladder.parseRank('Bronze 5').midSr).toBe(100);
     expect(ladder.tiers[0].midSr).toBe(500);
+  });
+});
+
+describe('icon sizing', () => {
+  const sizing = createIconSizing(ladder, iconMetrics);
+  const painted = (tier) => {
+    const { width, height } = sizing.icon(tier);
+    return width * height * iconMetrics[tier.icon].coverage;
+  };
+
+  it('gives every rank icon the same painted area', () => {
+    const areas = ladder.tiers.map(painted);
+    for (const area of areas) expect(area / areas[0]).toBeCloseTo(1, 6);
+  });
+
+  it('keeps each icon in proportion and inside the shared box', () => {
+    for (const tier of ladder.tiers) {
+      const icon = sizing.icon(tier);
+      const file = iconMetrics[tier.icon];
+      expect(icon.width / icon.height).toBeCloseTo(file.width / file.height, 6);
+      expect(icon.width).toBeLessThanOrEqual(sizing.box.width);
+      expect(icon.height).toBeLessThanOrEqual(sizing.box.height);
+    }
+  });
+
+  it('enlarges wide, spindly emblems and has measurements for every image it needs', () => {
+    const scaleOf = (id) => sizing.icon(ladder.tiers.find((tier) => tier.id === id)).scale;
+    expect(scaleOf('grandmaster')).toBeGreaterThan(scaleOf('emerald'));
+    expect(() => createIconSizing(ladder, {})).toThrow(/measure-icons/);
   });
 });

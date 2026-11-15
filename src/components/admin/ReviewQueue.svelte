@@ -107,7 +107,7 @@
       <li class="row" class:busy animate:flip={{ duration: ms(260) }} in:slide out:dissolve>
         <div class="who">
           {#if verdict.tier}
-            <RankBadge tier={verdict.tier} division={verdict.division} size={44} animated={false} />
+            <RankBadge tier={verdict.tier} division={verdict.division} size={54} animated={false} />
           {/if}
           <div>
             <div class="display rank">{submission.rank}</div>

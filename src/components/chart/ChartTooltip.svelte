@@ -31,7 +31,7 @@
   aria-hidden="true"
 >
   <div class="card" bind:clientWidth={cardWidth} bind:clientHeight={cardHeight}>
-    <RankBadge tier={reading.tier} division={reading.division.number} size={46} />
+    <RankBadge tier={reading.tier} division={reading.division.number} size={56} />
     <div class="text">
       <div class="display name">{reading.division.name}</div>
       <div class="numeric sr">{formatSr(reading.sr)} SR</div>

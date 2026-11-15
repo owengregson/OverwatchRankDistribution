@@ -1,0 +1,72 @@
+{
+  "Division_1.png": {
+    "width": 174,
+    "height": 80,
+    "coverage": 0.3998
+  },
+  "Division_2.png": {
+    "width": 174,
+    "height": 80,
+    "coverage": 0.3854
+  },
+  "Division_3.png": {
+    "width": 174,
+    "height": 80,
+    "coverage": 0.3626
+  },
+  "Division_4.png": {
+    "width": 174,
+    "height": 80,
+    "coverage": 0.3303
+  },
+  "Division_5.png": {
+    "width": 174,
+    "height": 80,
+    "coverage": 0.308
+  },
+  "Rank_Bronze_c.png": {
+    "width": 422,
+    "height": 357,
+    "coverage": 0.4809
+  },
+  "Rank_Champion_c.png": {
+    "width": 430,
+    "height": 313,
+    "coverage": 0.3842
+  },
+  "Rank_Diamond_c.png": {
+    "width": 431,
+    "height": 408,
+    "coverage": 0.444
+  },
+  "Rank_Emerald_c.png": {
+    "width": 382,
+    "height": 418,
+    "coverage": 0.4735
+  },
+  "Rank_Gold_c.png": {
+    "width": 388,
+    "height": 422,
+    "coverage": 0.4633
+  },
+  "Rank_Grandmaster_c.png": {
+    "width": 430,
+    "height": 273,
+    "coverage": 0.4019
+  },
+  "Rank_Master_c.png": {
+    "width": 432,
+    "height": 348,
+    "coverage": 0.4095
+  },
+  "Rank_Platinum_c.png": {
+    "width": 389,
+    "height": 419,
+    "coverage": 0.428
+  },
+  "Rank_Silver_c.png": {
+    "width": 346,
+    "height": 417,
+    "coverage": 0.4907
+  }
+}

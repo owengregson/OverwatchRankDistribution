@@ -1,13 +1,18 @@
 import { Spring, prefersReducedMotion } from 'svelte/motion';
+import iconMetrics from '@/data/iconMetrics.json';
 import { LADDER_CONFIG } from '@/data/ladder.js';
 import { SEASONS as BUNDLED_SEASONS, sortSeasons } from '@/data/seasons/index.js';
 import { backend } from '@/lib/backend/index.js';
 import { createLadder } from '@/lib/ladder/createLadder.js';
+import { createIconSizing } from '@/lib/ladder/iconSizing.js';
 import { clamp } from '@/lib/math/util.js';
 import { tryBuildSeasonModel } from '@/lib/model/buildSeasonModel.js';
 import { compareReadings, readAt } from '@/lib/model/reading.js';
 
 export const ladder = createLadder(LADDER_CONFIG);
+
+/** How large to draw each rank icon so they all look the same size. */
+export const iconSizing = createIconSizing(ladder, iconMetrics);
 
 /** Spring feel for the cursor: tight when tracking a pointer, loose when travelling. */
 const FOLLOW = { stiffness: 0.34, damping: 0.92 };
