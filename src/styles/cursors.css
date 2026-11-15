@@ -1,11 +1,28 @@
 /*
- * Site cursor set (assets/cursors). Each falls back to the system cursor of
- * the same meaning if the image cannot be used.
+ * Site cursor set (assets/cursors).
+ *
+ * A .cur file cannot be resized by the browser, so the site uses the 64px
+ * PNGs extracted from the .cur files (see scripts/extract-cursors.mjs) and
+ * declares them as "1.5x" images. That draws them at 64 ÷ 1.5 ≈ 43px.
+ *
+ * To change the size, change the 1.5x (bigger number = smaller cursor) and
+ * scale the hotspots to match:
+ * hotspot = (hotspot printed by the script) ÷ (that number).
+ *
+ * Browsers that cannot do this keep the system cursor of the same meaning.
  */
 :root {
-  --cursor-default: url('../../assets/cursors/overwatch_pointer.cur'), auto;
-  --cursor-link: url('../../assets/cursors/overwatch_finger.cur'), pointer;
-  --cursor-text: url('../../assets/cursors/overwatch_text.cur'), text;
+  --cursor-default: auto;
+  --cursor-link: pointer;
+  --cursor-text: text;
+}
+
+@supports (cursor: image-set(url('x.png') 1.5x) 0 0, auto) {
+  :root {
+    --cursor-default: image-set(url('../../assets/cursors/overwatch_pointer.png') 1.5x) 1 1, auto;
+    --cursor-link: image-set(url('../../assets/cursors/overwatch_finger.png') 1.5x) 11 1, pointer;
+    --cursor-text: image-set(url('../../assets/cursors/overwatch_text.png') 1.5x) 9 13, text;
+  }
 }
 
 html {
