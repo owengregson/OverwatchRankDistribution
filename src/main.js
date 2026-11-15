@@ -14,6 +14,11 @@ const SEASONS_PATIENCE = 4000;
 discourageInspecting();
 const seasons = app.refreshSeasons();
 
+// The text summary at the end of index.html is out of sight while the app
+// runs (styles/summary.css). Keep the Tab key out of it too, so focus never
+// lands on a link nobody can see; screen readers still reach its links.
+for (const link of document.querySelectorAll('.site-summary a')) link.tabIndex = -1;
+
 // The app is built behind the loading screen, with its entrance held until the screen opens.
 mount(App, { target: document.getElementById('app') });
 

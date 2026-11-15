@@ -272,7 +272,33 @@ export function renderSite() {
   return { files, articles };
 }
 
-/** The list of article links for the crawlable block on the home page. */
-export function homeArticleLinks() {
-  return ARTICLES.map((a) => `<li><a href="articles/${a.slug}/">${esc(a.title)}</a></li>`).join('\n          ');
+/**
+ * The generated parts of the home page's text summary (the block at the
+ * end of index.html: a text version of the chart for screen readers and
+ * for visitors without JavaScript). `table` lists every tier with the
+ * figures the chart shows; `links` is the list of articles.
+ */
+export function homeSummary() {
+  const d = loadSiteData();
+  const rows = [...d.tiers]
+    .reverse()
+    .map(
+      (t) =>
+        `<tr><th scope="row">${esc(t.name)}</th><td>${t.range}</td><td>${d.pct(t.share)}</td><td>${d.pct(t.below)}</td></tr>`,
+    )
+    .join('\n          ');
+
+  const table = `<table>
+        <caption>Estimated share of players in each rank, ${esc(d.season.name)}</caption>
+        <thead>
+          <tr><th scope="col">Rank</th><th scope="col">SR range</th><th scope="col">Share of players</th><th scope="col">Better than, at its lowest division</th></tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>`;
+
+  const links = ARTICLES.map((a) => `<li><a href="articles/${a.slug}/">${esc(a.title)}</a></li>`).join('\n          ');
+
+  return { table, links };
 }

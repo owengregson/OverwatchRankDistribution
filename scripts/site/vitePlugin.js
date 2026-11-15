@@ -1,8 +1,9 @@
 /**
  * Vite plugin for the crawlable side of the site.
  *
- * - Fills the {{...}} placeholders in index.html from site.config.js, so the
- *   production URL and site name live in one place.
+ * - Fills the {{...}} placeholders in index.html: the head tags from
+ *   site.config.js, so the production URL and site name live in one place,
+ *   and the text summary's table and article links from the site's data.
  * - On `vite build`, renders the static pages (scripts/site/render.js) into
  *   the output: articles/<slug>/index.html, articles/index.html, 404.html,
  *   sitemap.xml, robots.txt, site.webmanifest and the article stylesheet.
@@ -11,7 +12,13 @@
  */
 import { SITE, absoluteUrl } from '../../site.config.js';
 import { AUTHOR_LD } from './html.js';
-import { homeArticleLinks, renderSite } from './render.js';
+import { homeSummary, renderSite } from './render.js';
+
+/** Placeholders that are filled with markup (the home page's text summary) rather than plain text. */
+const MARKUP = () => {
+  const { table, links } = homeSummary();
+  return { SUMMARY_TABLE: table, ARTICLE_LINKS: links };
+};
 
 const PLACEHOLDERS = () => ({
   SITE_URL: SITE.url,
@@ -25,7 +32,6 @@ const PLACEHOLDERS = () => ({
   OG_IMAGE_ALT: SITE.ogImage.alt,
   AUTHOR_NAME: AUTHOR_LD.name,
   AUTHOR_URL: AUTHOR_LD.url,
-  ARTICLE_LINKS: homeArticleLinks(),
 });
 
 const TYPES = { html: 'text/html', xml: 'application/xml', txt: 'text/plain', css: 'text/css', webmanifest: 'application/manifest+json', ttf: 'font/ttf', woff2: 'font/woff2' };
@@ -38,12 +44,13 @@ export function staticSite() {
       order: 'pre',
       handler(html) {
         const values = PLACEHOLDERS();
+        const markup = MARKUP();
         return html.replace(/\{\{([A-Z_]+)\}\}/g, (match, key) => {
+          if (key in markup) return markup[key];
           if (!(key in values)) throw new Error(`index.html: unknown placeholder ${match}`);
           // Placeholders sit in attribute values and JSON-LD strings, which
-          // escape differently, so the plain-text values must need neither.
-          // ARTICLE_LINKS is markup.
-          if (key !== 'ARTICLE_LINKS' && /[&<>"\\]/.test(values[key])) {
+          // escape differently, so the values must need neither.
+          if (/[&<>"\\]/.test(values[key])) {
             throw new Error(`site.config.js: ${key} must not contain & < > " or \\ (it is used in index.html as is).`);
           }
           return values[key];

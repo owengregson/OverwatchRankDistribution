@@ -68,28 +68,35 @@
     <link rel="icon" type="image/png" href="/assets/images/favicon.png" />
     <title>Overwatch Rank Distribution</title>
 
-    <!-- Navy from the very first paint, before any stylesheet arrives. -->
+    <!--
+      Navy from the very first paint, before any stylesheet arrives. It must
+      be on <body>, not <html>: a background on <html> stops the body's from
+      becoming the page's, and the body would then paint over the animated
+      backdrop, which sits behind everything (Backdrop.svelte).
+    -->
     <style>
-      html {
+      body {
         background: #0a1230;
       }
     </style>
     <!--
-      What shows before the app does: the loading screen, and the "about"
-      block at the end of the page. The rest of the styles come with the app
-      (src/main.js).
+      Marks the page as having JavaScript, before anything is drawn. With it
+      the loading screen shows and the text summary is kept out of sight;
+      without it there is no chart to load, so it is the other way round
+      (loader.css, summary.css).
+    -->
+    <script>
+      document.documentElement.classList.add('js');
+    </script>
+    <!--
+      What is needed before the app arrives: the loading screen and the text
+      summary at the end of the page. The rest of the styles come with the
+      app (src/main.js).
     -->
     <link rel="stylesheet" href="/src/styles/tokens.css" />
     <link rel="stylesheet" href="/src/styles/fonts.css" />
     <link rel="stylesheet" href="/src/styles/loader.css" />
-    <link rel="stylesheet" href="/src/styles/home-about.css" />
-    <noscript>
-      <style>
-        .loader {
-          display: none;
-        }
-      </style>
-    </noscript>
+    <link rel="stylesheet" href="/src/styles/summary.css" />
   </head>
   <body>
     <!--
@@ -137,15 +144,20 @@
     <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
 
-    <!-- ===== Crawlable summary (begin) =====
-         Static text and links for search engines and for visitors without
-         JavaScript. It is visible to everyone, below the app. Article links
-         are filled in from scripts/site/articles at build time. -->
-    <section class="home-about" aria-labelledby="home-about-title">
+    <!--
+      A text version of the chart, for the people who cannot use the visual
+      one: screen reader users (the chart is drawn on a canvas) and visitors
+      without JavaScript. It is in the page for everyone, read out by screen
+      readers, and shown on screen only when JavaScript is off
+      (src/styles/summary.css). The table and the article
+      links are filled in from the site's data at build time
+      (scripts/site/render.js).
+    -->
+    <section class="site-summary" aria-labelledby="site-summary-title">
+      <h2 id="site-summary-title">About the Overwatch rank distribution chart</h2>
       <noscript>
-        <p class="home-about-noscript">The interactive chart needs JavaScript. The guides below work without it.</p>
+        <p class="site-summary__notice">The interactive chart needs JavaScript. The table and guides below work without it.</p>
       </noscript>
-      <h2 id="home-about-title">About the Overwatch rank distribution chart</h2>
       <p>
         This interactive chart shows how Overwatch competitive players are spread across the ranks, from Bronze to
         Champion. Move across the bell curve to see which rank sits at each SR and percentile, what share of players
@@ -156,14 +168,15 @@
         The curve for each season is fitted to community-submitted datapoints, each checked against a screenshot, so
         every figure is an estimate rather than an official Blizzard statistic.
       </p>
-      <h3>Guides</h3>
-      <ul>
+      {{SUMMARY_TABLE}}
+      <nav aria-labelledby="site-summary-guides">
+        <h3 id="site-summary-guides">Guides</h3>
+        <ul>
           {{ARTICLE_LINKS}}
-      </ul>
-      <p class="home-about-small">
-        <a href="articles/">All articles</a> · Unofficial fan project, not affiliated with Blizzard Entertainment.
-      </p>
+          <li><a href="articles/">All articles</a></li>
+        </ul>
+      </nav>
+      <p class="site-summary__small">Unofficial fan project, not affiliated with Blizzard Entertainment.</p>
     </section>
-    <!-- ===== Crawlable summary (end) ===== -->
   </body>
 </html>

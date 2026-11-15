@@ -1,0 +1,121 @@
+/*
+ * The text summary at the end of index.html: a description of the chart,
+ * a table of every rank and links to the guides.
+ *
+ * It exists for the people the visual chart does not work for. Without
+ * JavaScript it is all there is, and it is shown as styled here. With
+ * JavaScript (the `js` class on <html>, set in index.html) it is kept out
+ * of sight but left in the page, so a screen reader still reads it: see
+ * the last rule.
+ */
+.site-summary {
+  width: min(1120px, 100% - 32px);
+  margin: 32px auto;
+  padding: 22px 26px;
+  border: 1px solid var(--line);
+  background: rgb(10 18 48 / 0.6);
+  color: var(--ice-300);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.site-summary h2,
+.site-summary h3 {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ice-100);
+}
+
+.site-summary h2 {
+  font-size: 26px;
+}
+
+.site-summary h3 {
+  margin-top: 18px;
+  font-size: 20px;
+}
+
+.site-summary p {
+  max-width: 80ch;
+  margin: 0 0 10px;
+}
+
+.site-summary table {
+  width: 100%;
+  max-width: 720px;
+  margin-top: 14px;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.site-summary caption {
+  padding-bottom: 8px;
+  text-align: left;
+  color: var(--ice-100);
+}
+
+.site-summary th,
+.site-summary td {
+  padding: 6px 12px 6px 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+
+.site-summary thead th {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ice-400);
+}
+
+.site-summary tbody th {
+  color: var(--ice-100);
+}
+
+.site-summary ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 4px 24px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.site-summary a {
+  color: var(--ice-100);
+}
+
+.site-summary__notice {
+  padding: 10px 14px;
+  border-left: 3px solid var(--orange);
+  background: rgb(240 100 20 / 0.2);
+  color: #fff;
+}
+
+.site-summary__small {
+  font-size: 12px;
+  color: var(--ice-500);
+}
+
+/*
+ * Out of sight, still in the page: a one-pixel box with its contents
+ * clipped away, which screen readers read as normal. (The same technique
+ * as .visually-hidden in base.css, repeated here because this sheet has to
+ * work before the app's styles arrive.) It takes up no room, so the page
+ * does not grow or scroll because of it.
+ */
+.js .site-summary {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

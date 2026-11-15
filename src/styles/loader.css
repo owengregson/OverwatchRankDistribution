@@ -32,8 +32,13 @@
 }
 
 /* Nothing behind the loading screen should scroll. */
-html.loading {
+html.js.loading {
   overflow: hidden;
+}
+
+/* Without JavaScript (no `js` class, see index.html) nothing will ever load: no loading screen. */
+html:not(.js) .loader {
+  display: none;
 }
 
 .loader.is-opening {
