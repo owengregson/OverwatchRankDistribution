@@ -3,7 +3,7 @@ import { LADDER_CONFIG } from '../src/data/ladder.js';
 import season from '../src/data/seasons/2026-season-5.json';
 import { createLadder } from '../src/lib/ladder/createLadder.js';
 import { cdf, probit } from '../src/lib/math/normal.js';
-import { buildSeasonModel } from '../src/lib/model/buildSeasonModel.js';
+import { buildSeasonModel, tryBuildSeasonModel } from '../src/lib/model/buildSeasonModel.js';
 import { compareReadings, readAt, tierShares } from '../src/lib/model/reading.js';
 
 const ladder = createLadder(LADDER_CONFIG);
@@ -139,5 +139,27 @@ describe('readings', () => {
     expect(gap.playersBetween).toBeCloseTo(0.01, 9);
     expect(gap.divisionGap).toBe(1);
     expect(gap.low.sr).toBe(3700);
+  });
+});
+
+describe('tryBuildSeasonModel', () => {
+  it('returns the model for a season that fits', () => {
+    const fit = tryBuildSeasonModel(season, ladder);
+    expect(fit.error).toBeNull();
+    expect(fit.model.cdf(3700)).toBeCloseTo(0.97, 9);
+  });
+
+  it('reports a season with too little data instead of throwing', () => {
+    const fit = tryBuildSeasonModel({ datapoints: [] }, ladder);
+    expect(fit.model).toBeNull();
+    expect(fit.error.message).toMatch(/at least two/);
+  });
+});
+
+describe('ladder midpoints', () => {
+  it('puts midSr halfway through each division and tier', () => {
+    expect(ladder.parseRank('Master 3').midSr).toBe(3750);
+    expect(ladder.parseRank('Bronze 5').midSr).toBe(100);
+    expect(ladder.tiers[0].midSr).toBe(500);
   });
 });
