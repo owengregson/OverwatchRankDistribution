@@ -126,12 +126,11 @@
 
   // ---------- Keyboard ----------
 
-  /** The nearest division (or tier) boundary strictly beyond `sr` in a direction. */
-  function nextBoundary(sr, direction, byTier) {
-    const stops = (byTier ? ladder.tiers : ladder.divisions).map((item) => item.minSr).concat(ladder.maxSr);
-    return direction > 0
-      ? (stops.find((stop) => stop > sr) ?? ladder.maxSr)
-      : (stops.findLast((stop) => stop < sr) ?? ladder.minSr);
+  /** The middle of the division one step away: the next division, or the same division a tier over. */
+  function neighbour(sr, direction, byTier) {
+    const here = ladder.divisionAt(sr);
+    const step = direction * (byTier ? ladder.divisionsPerTier : 1);
+    return (ladder.divisions[here.index + step] ?? here).midSr;
   }
 
   function onkeydown(event) {
@@ -139,9 +138,8 @@
     const sr = probe.target;
 
     if (direction) {
-      if (event.key.startsWith('Page')) probe.glide(nextBoundary(sr, direction, true));
-      else if (event.shiftKey) probe.follow(sr + direction * FINE_STEP);
-      else probe.glide(nextBoundary(sr, direction, false));
+      if (event.shiftKey) probe.follow(sr + direction * FINE_STEP);
+      else probe.goTo(neighbour(sr, direction, event.key.startsWith('Page')));
     } else if (event.key === 'Home') probe.glide(ladder.minSr);
     else if (event.key === 'End') probe.glide(ladder.maxSr);
     else if (event.key === 'Enter' || event.key === ' ') togglePin(sr);

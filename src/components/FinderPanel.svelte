@@ -64,9 +64,13 @@
     app.probe.glide(mode.toSr(value));
   }
 
-  /** Jump to the entry SR of a division, keeping whichever half of the pair wasn't clicked. */
+  /**
+   * Go to the middle of a division. Aiming at the middle rather than the
+   * entry SR means the readout lands on the chosen rank straight away
+   * instead of creeping up to its boundary.
+   */
   function goToRank(tier, number) {
-    app.probe.glide(tier.divisions.find((d) => d.number === number).minSr);
+    app.probe.goTo(tier.divisions.find((d) => d.number === number).midSr);
   }
 </script>
 

@@ -17,7 +17,7 @@
   const compact = $derived(columnWidth < 64);
 
   function visit(tier) {
-    app.probe.glide((tier.minSr + tier.maxSr) / 2);
+    app.probe.glide(tier.midSr);
   }
 </script>
 
@@ -28,7 +28,7 @@
         type="button"
         class="tier"
         class:active={tier.id === activeId}
-        style:left="{((tier.minSr + tier.maxSr) / 2 / ladder.maxSr) * 100}%"
+        style:left="{(tier.midSr / ladder.maxSr) * 100}%"
         style:--color={tier.color}
         style:--i={tier.index}
         onclick={() => visit(tier)}

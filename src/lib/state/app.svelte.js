@@ -11,6 +11,8 @@ export const ladder = createLadder(LADDER_CONFIG);
 /** Spring feel for the cursor: tight when tracking a pointer, loose when travelling. */
 const FOLLOW = { stiffness: 0.34, damping: 0.92 };
 const GLIDE = { stiffness: 0.06, damping: 0.6 };
+/** Moves shorter than this (SR) are quick hops rather than glides. */
+const HOP_DISTANCE = 450;
 
 /**
  * The probe is the point on the SR axis being inspected. It is moved by the
@@ -50,6 +52,15 @@ class Probe {
   /** Travel to a point with a visible sweep. */
   glide(sr) {
     this.#move(sr, GLIDE);
+  }
+
+  /**
+   * Go to a chosen point: sweep across the ladder for a long trip, but get
+   * there almost at once for a short one (such as the next division), where
+   * a slow settle would leave the readout lagging behind the choice.
+   */
+  goTo(sr) {
+    this.#move(sr, Math.abs(sr - this.position) <= HOP_DISTANCE ? FOLLOW : GLIDE);
   }
 
   /** Move without animating. */

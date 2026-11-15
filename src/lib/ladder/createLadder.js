@@ -17,6 +17,7 @@ export function createLadder(config) {
       ...tierConfig,
       index: tierIndex,
       maxSr: tierMax,
+      midSr: (tierConfig.minSr + tierMax) / 2,
       isTop: tierIndex === config.tiers.length - 1,
       divisions: [],
     };
@@ -32,6 +33,7 @@ export function createLadder(config) {
         index: divisions.length,
         minSr: tier.minSr + i * step,
         maxSr: tier.minSr + (i + 1) * step,
+        midSr: tier.minSr + (i + 0.5) * step,
       };
       tier.divisions.push(division);
       divisions.push(division);
