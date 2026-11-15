@@ -50,34 +50,11 @@ Dev talks to the same database as the live site (`src/config.js`). Empty `anonKe
 <a name="the-curve"></a>
 <img src="docs/readme/section-curve.png" alt="02 The curve" width="100%">
 
-<img src="docs/readme/seasons.png" alt="Each bundled season's curve on its own ladder, with a white dot at every datapoint it was made from." width="100%">
+- **Fitted, never drawn.** Each season's curve is worked out from figures for that season: published ones, and rank screens players send in.
+- **Two fits.** `normal` is the best-fit bell curve, for a few noisy community figures. `freeform` follows the figures closely, for a season whose whole distribution was published.
+- **A bell tail above 99%.** The game's own figure stops at 99%, so the top 1% is always a bell tail.
 
-- **A season is a list of datapoints.** Each says: this rank (or SR) beats this share of players.
-- **The curve is fitted to them, never drawn.** The white dots above are the datapoints.
-- **Two fits.** `normal` is the best-fit bell curve, for a few noisy community figures. `freeform` passes through every point, for a season whose whole distribution was published.
-
-Seasons live in `src/data/seasons/*.json`:
-
-```json
-{
-  "id": "2026-season-5",
-  "year": 2026,
-  "number": 5,
-  "name": "2026: Season 5",
-  "model": "normal",
-  "datapoints": [
-    { "rank": "Master 3", "betterThan": 97, "role": "tank" },
-    { "sr": 3800, "betterThan": 98, "role": "support", "weight": 2, "note": "optional" }
-  ]
-}
-```
-
-`role` is the role the figure is for: `tank`, `damage` or `support`. It is kept with the datapoint and does not change the curve.
-
-| Optional field | Effect |
-| --- | --- |
-| `"ladder": "classic"` | Played on the ladder before Emerald existed |
-| `"older": true` | Listed under **Older Seasons** in the header, not as its own tab |
+Each season also says which ladder it was played on (today's, or the one before Emerald existed) and whether it has a tab of its own or sits under **Older Seasons**. Both are set in the admin panel. The fits are covered in the [DEEP DIVE](docs/DETAILS.md).
 
 <a name="submissions"></a>
 <img src="docs/readme/section-submissions.png" alt="03 Submissions" width="100%">

@@ -46,7 +46,7 @@ function questions(d, h) {
     },
     {
       q: 'Are these official Blizzard numbers?',
-      a: `<p>No. Blizzard does not publish a full rank distribution. These are estimates fitted to ${d.datapoints.length} community-submitted datapoint${d.datapoints.length === 1 ? '' : 's'} for ${d.season.name}, each checked against a screenshot. The site is an unofficial fan project and is not affiliated with Blizzard Entertainment.</p>`,
+      a: `<p>No. Blizzard does not publish a full rank distribution. These are estimates fitted to community-submitted figures for ${d.season.name}, each checked against a screenshot. The site is an unofficial fan project and is not affiliated with Blizzard Entertainment.</p>`,
     },
     {
       q: 'How is the rank distribution estimated?',
@@ -54,7 +54,7 @@ function questions(d, h) {
     },
     {
       q: 'How accurate are the percentages?',
-      a: `<p>They are most reliable near the submitted datapoints (currently ${h.datapointList()}) and least reliable far from them, especially in the top tiers, where small changes in the shape of the curve matter most. More datapoints across the ladder make every number more robust.</p>`,
+      a: `<p>They are most reliable near the submitted datapoints and least reliable far from them, especially in the top tiers, where small changes in the shape of the curve matter most. More datapoints across the ladder make every number more robust.</p>`,
     },
     {
       q: 'Does the distribution differ by role?',

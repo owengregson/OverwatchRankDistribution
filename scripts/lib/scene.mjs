@@ -88,14 +88,6 @@ export function stroke(points, width) {
   return quads;
 }
 
-/** A filled circle, as a polygon. */
-export function disc(cx, cy, radius, steps = 20) {
-  return Array.from({ length: steps }, (_, i) => {
-    const angle = (i / steps) * Math.PI * 2;
-    return [cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius];
-  });
-}
-
 /** Text in `font` with its baseline at (x, y); `align` is where x is on the line: 'left', 'center' or 'right'. */
 export function text(canvas, font, string, size, x, y, color, { tracking = 0, skew = 0, align = 'left', opacity = 1 } = {}) {
   const missing = [...string].find((char) => char !== ' ' && !font.has(char));
@@ -110,10 +102,9 @@ export function text(canvas, font, string, size, x, y, color, { tracking = 0, sk
  * A season's fitted curve, filled tier by tier, over [left, right] with its
  * base at `base`: the tier strip under the axis, a faint line at each tier
  * boundary and, with `labels`, the tier names. `scale` enlarges the line
- * widths and lettering for a picture drawn larger. `dots` marks the SR of
- * each of the season's datapoints on the curve.
+ * widths and lettering for a picture drawn larger.
  */
-export function seasonCurve(canvas, { ladder, model }, { left, right, base, height, labels = true, dots = false, scale = 1 }) {
+export function seasonCurve(canvas, { ladder, model }, { left, right, base, height, labels = true, scale = 1 }) {
   const xAt = (sr) => left + ((right - left) * sr) / ladder.maxSr;
   let peak = 0;
   for (let sr = 0; sr <= ladder.maxSr; sr += 5) peak = Math.max(peak, model.pdf(sr));
@@ -143,12 +134,6 @@ export function seasonCurve(canvas, { ladder, model }, { left, right, base, heig
   canvas.fill(stroke(line, 3 * scale), WHITE, 0.9);
   canvas.fill([rect(left, base - scale, right, base + scale)], ICE_500, 0.8);
 
-  if (dots) {
-    for (const { sr } of model.points) {
-      canvas.fill([disc(xAt(sr), yAt(sr), 5 * scale)], NAVY_BOTTOM);
-      canvas.fill([disc(xAt(sr), yAt(sr), 3.2 * scale)], WHITE);
-    }
-  }
   return { xAt, yAt };
 }
 

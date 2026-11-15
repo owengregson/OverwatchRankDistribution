@@ -14,14 +14,13 @@ export default {
     const gm = d.tier('grandmaster');
     const top5 = d.topCut(0.05);
     const top1 = d.topCut(0.01);
-    const inMaster = d.datapoints.filter((p) => d.ladder.divisionAt(p.sr).tier.id === 'master');
     return `
 <p>Yes. Master is a high rank by any measure. On the ${d.season.name} estimate, Master 5 is better than about <strong>${d.pct(t.below)}</strong> of competitive players, and Master or higher is roughly ${d.oneIn(t.top)} players. This page breaks the tier down by division and compares it with Diamond below and Grandmaster above. The same figures are on ${h.chart('the interactive Overwatch rank chart')}, where you can compare Master with any other rank.</p>
 
 ${h.estimateNote()}
 
 <h2>What percent of players are Master?</h2>
-<p>About ${d.pct(t.share)} of players are in Master, the tier from ${t.range} SR on this site's scale. Master or higher, including Grandmaster and Champion, is ${d.pct(t.top)}. ${inMaster.length ? `This tier is also where the current season's datapoints are: ${inMaster.map((p) => `${p.label} was reported as better than ${d.pct(p.p)} of players`).join(', and ')}. So Master figures are among the best-supported numbers on the site.` : ''}</p>
+<p>About ${d.pct(t.share)} of players are in Master, the tier from ${t.range} SR on this site's scale. Master or higher, including Grandmaster and Champion, is ${d.pct(t.top)}.</p>
 
 ${h.curve({
   label: 'Overwatch rank distribution with the Master tier highlighted.',

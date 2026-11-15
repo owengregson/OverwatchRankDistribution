@@ -12,11 +12,6 @@ import { esc } from './html.js';
 export function createKit(d, root) {
   const href = (slug) => `${root}articles/${slug}/`;
   const tierName = (t) => `<span class="tier" style="--c:${t.color}">${esc(t.name)}</span>`;
-  const datapointList = () => {
-    const names = d.datapoints.map((p) => p.label);
-    if (names.length <= 1) return names.join('');
-    return `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
-  };
 
   return {
     href,
@@ -37,10 +32,8 @@ export function createKit(d, root) {
     /** The standard caveat on where the numbers come from. */
     estimateNote: () =>
       `<aside class="note">
-  <p><strong>About these numbers.</strong> Every figure on this page is an estimate from the ${esc(d.season.name)} curve, fitted to ${d.datapoints.length} community-submitted datapoint${d.datapoints.length === 1 ? '' : 's'} (${esc(datapointList())}). Blizzard does not publish a rank distribution, so these are not official figures. Read <a href="${href('how-the-estimate-works')}">how the estimate is made</a> for what that means for accuracy.</p>
+  <p><strong>About these numbers.</strong> Every figure on this page is an estimate from the ${esc(d.season.name)} curve, fitted to community-submitted figures. Blizzard does not publish a rank distribution, so these are not official figures. Read <a href="${href('how-the-estimate-works')}">how the estimate is made</a> for what that means for accuracy.</p>
 </aside>`,
-
-    datapointList,
 
     /** Tier, SR range, share of players, percentile at the start of the tier. */
     tierTable: ({ caption = 'Estimated share of players in each tier' } = {}) => `<div class="table-wrap panel"><table>

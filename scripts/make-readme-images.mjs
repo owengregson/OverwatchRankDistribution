@@ -9,7 +9,6 @@
  *   banner.png      the logo, the title and the newest season's curve
  *   features.png    what the site does, as four cards
  *   tiers.png       the share of players in each rank, newest season
- *   seasons.png     every bundled season's curve, with its datapoints marked
  *   section-*.png   the heading strip above each section
  *
  * All are drawn twice the size they are shown at, so they stay sharp on a
@@ -164,33 +163,6 @@ function tiers() {
   return canvas;
 }
 
-/** Every bundled season's curve on its own ladder, in rows of four, with a dot at each of its datapoints. */
-function seasons() {
-  const perRow = Math.min(4, site.seasons.length);
-  const rows = Math.ceil(site.seasons.length / perRow);
-  const gap = 40;
-  const cell = { width: (W - EDGE * 2 - gap * (perRow - 1)) / perRow, height: 364 };
-  const canvas = createCanvas(W, 56 + rows * cell.height);
-  backdrop(canvas);
-
-  site.seasons.forEach((entry, i) => {
-    const x = EDGE + (i % perRow) * (cell.width + gap);
-    const y = 56 + Math.floor(i / perRow) * cell.height;
-    const count = entry.datapoints.length;
-
-    text(canvas, oblique, entry.name.toUpperCase(), 54, x, y + 44, WHITE, { skew: LEAN, tracking: 0.02 });
-    text(canvas, titling, `${FIT_NAMES[entry.model.type]} · ${count} DATAPOINT${count === 1 ? '' : 'S'}`, 26, x + 2, y + 84, ICE_400, {
-      tracking: 0.12,
-    });
-    seasonCurve(
-      canvas,
-      { ladder: entry.playedOn, model: entry.model },
-      { left: x, right: x + cell.width, base: y + 320, height: 200, labels: false, dots: true, scale: 1.4 },
-    );
-  });
-  return canvas;
-}
-
 /** The section headings, in the order the README has them: [file name, name, the words on the right]. */
 const SECTIONS = [
   ['run', 'RUN IT', 'TWO COMMANDS'],
@@ -204,5 +176,4 @@ const SECTIONS = [
 write(`${OUT}/banner.png`, banner());
 write(`${OUT}/features.png`, features());
 write(`${OUT}/tiers.png`, tiers());
-write(`${OUT}/seasons.png`, seasons());
 SECTIONS.forEach(([file, title, note], i) => write(`${OUT}/section-${file}.png`, section(i + 1, title, note)));

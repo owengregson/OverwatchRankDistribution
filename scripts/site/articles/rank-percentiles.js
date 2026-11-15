@@ -66,7 +66,7 @@ ${h.cutoffTable([0.75, 0.5, 0.4, 0.3, 0.25, 0.2, 0.15, 0.1, 0.05, 0.03, 0.02, 0.
 <p>A percentile counts everyone below you. The share of players in a rank counts only the people inside it. Both come from the same curve but answer different questions. "Diamond is ${d.pct(d.tier('diamond').share)} of players" is a share; "Diamond 5 is better than ${d.pct(d.tier('diamond').below)} of players" is a percentile. For shares by tier and division, see ${h.a('rank-percentages', 'what percentage of players are in each rank')}.</p>
 
 <h2>How reliable are these percentiles?</h2>
-<p>Percentiles close to the submitted datapoints are the most reliable, since the curve passes through or close to them. The current season's datapoints are ${h.datapointList()}. Percentiles far from those ranks are filled in by the bell-curve shape, which is a good general model for skill ratings but will not match any season perfectly. As more datapoints are approved, the fit updates and these pages follow on the next build. ${h.a('how-the-estimate-works', 'How the estimate is made')} covers the method.</p>
+<p>Percentiles close to the submitted datapoints are the most reliable, since the curve passes through or close to them. Percentiles far from them are filled in by the bell-curve shape, which is a good general model for skill ratings but will not match any season perfectly. As more datapoints are approved, the fit updates and these pages follow on the next build. ${h.a('how-the-estimate-works', 'How the estimate is made')} covers the method.</p>
 
 ${h.cta('Switch the finder to Percent, type the share of players you want to beat, and the chart jumps to that rank.')}
 `;

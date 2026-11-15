@@ -96,7 +96,6 @@ export function loadSiteData() {
     mostCommonTier: byShare(tiers)[0],
     tiersByShare: byShare(tiers),
     mostCommonDivision: byShare(divisions)[0],
-    datapoints: season.model.points,
     /** Share of players in this tier or any higher one. */
     atOrAbove: (id) => tier(id).top,
     pct: formatPercent,
