@@ -21,8 +21,8 @@ function ogImage() {
   backdrop(canvas);
 
   const left = 72;
+  // The logo stands on its own above the title, with no caption beside it.
   drawLogo(canvas, left, 52, 60);
-  canvas.fill(titling.layout('UNOFFICIAL FAN PROJECT', 24, left + 78, 92, { tracking: 0.12 }), ICE_300);
 
   canvas.fill(oblique.layout('OVERWATCH', 104, left, 214, { skew: LEAN, tracking: 0.02 }), WHITE);
   canvas.fill(oblique.layout('RANK DISTRIBUTION', 104, left, 306, { skew: LEAN, tracking: 0.02 }), ORANGE);
