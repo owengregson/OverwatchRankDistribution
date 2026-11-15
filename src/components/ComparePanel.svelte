@@ -74,8 +74,8 @@
 <style>
   .compare {
     display: grid;
-    gap: 10px;
-    padding: 16px 20px;
+    gap: 9px;
+    padding: 13px 20px 14px;
   }
 
   header {

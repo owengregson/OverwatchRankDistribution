@@ -154,8 +154,8 @@
 <style>
   .finder {
     display: grid;
-    gap: 12px;
-    padding: 16px 20px 16px;
+    gap: 10px;
+    padding: 13px 20px 13px;
   }
 
   header {

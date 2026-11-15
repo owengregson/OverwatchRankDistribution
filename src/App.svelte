@@ -93,8 +93,9 @@
 
   h1 {
     margin-top: 4px;
-    font-size: clamp(44px, 5vw, 76px);
+    font-size: clamp(40px, 4.4vw, 70px);
     font-style: italic;
+    white-space: nowrap;
   }
 
   h1 em {
@@ -156,6 +157,22 @@
     flex-direction: column;
     gap: var(--gutter);
     min-width: 0;
+  }
+
+  /*
+   * Wide screens: everything fits one viewport. The chart takes whatever
+   * height is left; if the side panels cannot fit they scroll on their own.
+   */
+  @media (min-width: 1041px) {
+    .app {
+      height: 100dvh;
+      min-height: 600px;
+    }
+
+    .side {
+      overflow-y: auto;
+      scrollbar-width: none;
+    }
   }
 
   footer {

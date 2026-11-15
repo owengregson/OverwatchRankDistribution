@@ -23,7 +23,7 @@
 
   <div class="hero">
     <div class="glow"></div>
-    <RankBadge tier={reading.tier} division={reading.division.number} size={104} />
+    <RankBadge tier={reading.tier} division={reading.division.number} size="var(--badge-size)" />
     <div class="identity">
       <h2 class="display name">{reading.tier.name}<span class="division">{reading.division.number}</span></h2>
       <p class="sr numeric"><b class="display">{formatSr(reading.sr)}</b> SR</p>
@@ -65,9 +65,10 @@
 
 <style>
   .readout {
+    --badge-size: 88px;
     display: grid;
-    gap: 14px;
-    padding: 18px 20px 16px;
+    gap: 11px;
+    padding: 15px 20px 14px;
   }
 
   /* Accent line in the tier's colour along the top edge. */
@@ -112,7 +113,7 @@
     align-items: baseline;
     flex-wrap: wrap;
     column-gap: 10px;
-    font-size: clamp(38px, 3.4vw, 50px);
+    font-size: clamp(36px, 3.2vw, 46px);
     font-style: italic;
     color: var(--tier);
     text-shadow: 0 0 28px color-mix(in srgb, var(--tier) 45%, transparent);
@@ -140,13 +141,13 @@
     grid-template-columns: auto 1fr auto;
     align-items: baseline;
     gap: 6px 12px;
-    padding: 12px 14px 14px;
+    padding: 9px 14px 12px;
     background: rgb(5 10 26 / 0.45);
     border-left: 3px solid var(--tier);
   }
 
   .figure {
-    font-size: 54px;
+    font-size: 46px;
     text-align: center;
     color: var(--ice-50);
   }
@@ -186,7 +187,7 @@
   }
 
   .stats div {
-    padding: 9px 12px 8px;
+    padding: 7px 12px 6px;
     background: rgb(13 21 52 / 0.92);
   }
 
@@ -198,8 +199,8 @@
   }
 
   .stats dd {
-    margin: 3px 0 0;
-    font-size: 27px;
+    margin: 2px 0 0;
+    font-size: 24px;
     color: var(--ice-50);
   }
 
@@ -228,5 +229,21 @@
 
   .next b {
     color: var(--ice-100);
+  }
+
+  /* Short screens: shrink the badge and drop the least essential row. */
+  @media (max-height: 800px) {
+    .readout {
+      --badge-size: 68px;
+      gap: 9px;
+    }
+
+    .figure {
+      font-size: 38px;
+    }
+
+    .next {
+      display: none;
+    }
   }
 </style>

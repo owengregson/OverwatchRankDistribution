@@ -8,7 +8,8 @@
   canvas. No tier is stretched to fill, so none looks bigger than another,
   and the slot keeps a fixed height whatever icon is in it.
 
-  `size` is the width of the canvas in CSS pixels.
+  `size` is the width of the canvas: a number of CSS pixels, or any CSS
+  length such as "var(--badge-size)" so a parent can size it responsively.
 -->
 <script>
   import { imageUrl } from '@/lib/assets.js';
@@ -32,6 +33,7 @@
   const canvas = ladder.iconCanvas;
   const plate = ladder.divisionIcon;
   const label = $derived(division ? `${tier.name} ${division}` : tier.name);
+  const width = $derived(typeof size === 'number' ? `${size}px` : size);
 </script>
 
 <div
@@ -39,7 +41,7 @@
   class:centered={align === 'center' && !division}
   role="img"
   aria-label={label}
-  style:--unit="{size / canvas.width}px"
+  style:--unit="calc({width} / {canvas.width})"
   style:--canvas-w={canvas.width}
   style:--canvas-h={canvas.height}
 >
