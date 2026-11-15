@@ -1,6 +1,5 @@
-<!-- Light floating nav bar: brand tile, season tabs, model summary and call to action. -->
+<!-- Light floating nav bar: brand tile, season tabs and call to action. -->
 <script>
-  import ModelPopover from '@/components/ModelPopover.svelte';
   import { imageUrl } from '@/lib/assets.js';
   import { app } from '@/lib/state/app.svelte.js';
   import { focusFinder } from '@/lib/ui.js';
@@ -26,10 +25,6 @@
   </nav>
 
   <div class="spacer"></div>
-
-  {#if app.model}
-    <ModelPopover />
-  {/if}
 
   <button type="button" class="cta" onclick={focusFinder}>Find my rank</button>
 </header>
@@ -179,10 +174,6 @@
     .seasons button {
       padding: 0 8px;
       font-size: 13px;
-    }
-
-    .nav :global(.chip) {
-      display: none;
     }
 
     .cta {

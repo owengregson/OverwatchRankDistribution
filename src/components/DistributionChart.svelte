@@ -15,7 +15,6 @@
   import CompareLayer from '@/components/chart/CompareLayer.svelte';
   import CursorLayer from '@/components/chart/CursorLayer.svelte';
   import CurveLayer from '@/components/chart/CurveLayer.svelte';
-  import DatapointMarkers from '@/components/chart/DatapointMarkers.svelte';
   import GridLines from '@/components/chart/GridLines.svelte';
   import PercentileRuler from '@/components/chart/PercentileRuler.svelte';
   import SrAxis from '@/components/chart/SrAxis.svelte';
@@ -27,14 +26,14 @@
   import { ms } from '@/lib/motion.js';
   import { app, ladder } from '@/lib/state/app.svelte.js';
 
-  const PADDING = { top: 54, right: 18, bottom: 30, left: 18 };
+  const PADDING = { top: 62, right: 18, bottom: 30, left: 18 };
   /** SR between curve samples. 10 SR is about 2px on a wide screen: visually smooth. */
   const SAMPLE_STEP = 10;
   /** Empty space kept above the curve's peak, as a fraction of the peak. */
   const HEADROOM = 1.14;
   /** A press that moves less than this many pixels is a click, not a drag. */
   const CLICK_SLOP = 5;
-  /** How close (px) the cursor must be to a datapoint or pin to "touch" it. */
+  /** How close (px) a click must be to the pin to count as clicking it. */
   const SNAP_RADIUS = 9;
   const FINE_STEP = 10;
 
@@ -93,9 +92,6 @@
   });
 
   const snapSr = $derived((SNAP_RADIUS / scales.innerW) * ladder.maxSr);
-  const nearestDatapoint = $derived(
-    app.model.points.find((point) => Math.abs(point.sr - probe.sr) <= snapSr) ?? null,
-  );
 
   // ---------- Pointer and touch ----------
 
@@ -187,11 +183,10 @@
         <CurveLayer />
         <PercentileRuler />
         <SrAxis />
-        <DatapointMarkers nearest={nearestDatapoint} />
         <CompareLayer />
         <CursorLayer />
       </svg>
-      <ChartTooltip datapoint={nearestDatapoint} />
+      <ChartTooltip />
     {/if}
   </div>
 

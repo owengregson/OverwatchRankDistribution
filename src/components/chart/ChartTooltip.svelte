@@ -4,13 +4,10 @@
   import { getChart } from '@/lib/chart/context.js';
   import { formatPercent, formatSr } from '@/lib/format.js';
   import { clamp } from '@/lib/math/util.js';
-  import { slide } from '@/lib/motion.js';
   import { app } from '@/lib/state/app.svelte.js';
 
   /** Gap between the cursor line and the card. */
   const OFFSET = 16;
-
-  let { datapoint = null } = $props();
 
   const chart = getChart();
   const s = $derived(chart.scales);
@@ -22,7 +19,7 @@
   // Sit to the right of the cursor until there is no room, then flip left.
   const flipped = $derived(chart.cursorX + OFFSET + cardWidth > s.width - 4);
   const dotY = $derived(s.y(chart.densityAt(app.probe.position)));
-  const top = $derived(clamp(dotY - cardHeight / 2, 28, Math.max(28, s.bottom - cardHeight - 10)));
+  const top = $derived(clamp(dotY - cardHeight / 2, s.top, Math.max(s.top, s.bottom - cardHeight - 10)));
 </script>
 
 <div
@@ -41,29 +38,18 @@
       <div class="numeric beats">Better than <b>{formatPercent(reading.betterThan)}</b></div>
     </div>
   </div>
-
-  {#if datapoint}
-    <div class="datapoint" transition:slide={{ y: -6 }}>
-      <span class="gem"></span>
-      Datapoint: {datapoint.label} beats {formatPercent(datapoint.p)}
-    </div>
-  {/if}
 </div>
 
 <style>
   .tooltip {
     position: absolute;
     z-index: 2;
-    display: grid;
-    gap: 4px;
-    justify-items: start;
     pointer-events: none;
     transform: translateX(var(--offset));
     transition: transform 260ms var(--ease-out);
   }
 
   .tooltip.flipped {
-    justify-items: end;
     transform: translateX(calc(-100% - var(--offset)));
   }
 
@@ -96,23 +82,5 @@
 
   .beats b {
     color: var(--ice-50);
-  }
-
-  .datapoint {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    padding: 4px 10px 4px 8px;
-    background: var(--orange);
-    color: #fff;
-    font-size: 11px;
-    white-space: nowrap;
-  }
-
-  .gem {
-    width: 6px;
-    height: 6px;
-    background: #fff;
-    rotate: 45deg;
   }
 </style>
