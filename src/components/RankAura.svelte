@@ -1,43 +1,54 @@
 <!--
-  The light effect around a rank icon, as in game. Metal tiers have none;
+  The light effect behind a rank icon, as in game. Metal tiers have none;
   the rest are built from up to four pieces, set per effect in EFFECTS:
 
-    halo      a glow that hugs the icon                          (behind)
-    streak    a long horizontal hairline through the icon        (behind)
-    rays      short shines fanning out from the centre, each at
-              a fixed angle, slowly fading in and out            (in front)
-    sparkles  small crossed glints that take turns to swell in
-              and fade out at fixed spots, without spinning      (in front)
+    halo      a glow that hugs the icon
+    streak    a long horizontal hairline through the icon
+    rays      short shines fanning out from the centre, each at a fixed
+              angle, slowly fading in and out
+    sparkles  small crossed glints that take turns to swell in and fade
+              out at fixed spots, without spinning
 
-  RankBadge draws this twice: layer="back" under the icon and
-  layer="front" over it, where the light adds to the artwork.
+  Every piece is drawn behind the icon and behind the division plate
+  (RankBadge sets up that stacking).
 
   Which tier gets which effect is the tier's `glow` in src/data/ladder.js.
 
-  All lengths are in source pixels of the icon artwork (an icon is about
-  430 wide) and are multiplied by --unit, inherited from RankBadge, so the
-  effect scales with the badge. Positions are measured from the centre of
-  the effect: x to the right, y downwards.
+  All lengths are in pixels of the icon's own artwork (an icon file is
+  about 430 wide) and are multiplied by --unit, inherited from RankBadge,
+  so the effect scales with the icon. Positions are measured from the
+  centre of the effect: x to the right, y downwards.
 
   The ray positions were traced from the game (assets/reference/
   HighlightedShines.png): each is [angle, reach, level], with the angle in
   degrees clockwise from pointing right, the reach being how far from the
-  centre its tip is, and the level being how visible it gets.
+  centre its tip was traced, and the level being how visible it gets.
 -->
 <script module>
-  /** Peak opacity of a ray by level. The streak is 1; even a bright ray is about two thirds of it. */
-  const LEVELS = { faint: 0.15, mid: 0.36, bright: 0.64 };
+  /**
+   * Tuning for the rays.
+   *   start      how far from the centre a ray begins
+   *   thickness  a little thicker than the streak
+   *   length     share of the traced length that is drawn
+   *   levels     peak opacity by level; even a bright ray stays well under the streak
+   */
+  const RAY = {
+    start: 60,
+    thickness: 8.75,
+    length: 0.8,
+    levels: { faint: 0.075, mid: 0.18, bright: 0.32 },
+  };
 
-  /** Rays start this far from the centre and are this thick: a touch thicker than the streak. */
-  const RAY = { start: 60, thickness: 7 };
+  /** Peak opacity of the horizontal streak. */
+  const STREAK_OPACITY = 0.8;
 
   const EFFECTS = {
     // Emerald, Diamond
-    soft: { halo: { reach: 580, peak: 36 } },
+    soft: { halo: { reach: 580, peak: 24 } },
 
     // Master
     radiant: {
-      halo: { reach: 680, peak: 78, breathes: true },
+      halo: { reach: 680, peak: 50, breathes: true },
       sparkles: { period: 5, spots: [{ x: 204, y: -18, span: 120 }] },
     },
 
@@ -45,7 +56,7 @@
     flare: {
       // The light sits a little above the middle of this wide, short icon.
       origin: { x: 0, y: -20 },
-      halo: { reach: 680, peak: 82, breathes: true },
+      halo: { reach: 680, peak: 54, breathes: true },
       streak: { length: 1240, thickness: 5 },
       rays: [
         [-145, 250, 'bright'],
@@ -74,7 +85,7 @@
 
     // Champion
     blaze: {
-      halo: { reach: 720, peak: 92, breathes: true },
+      halo: { reach: 720, peak: 62, breathes: true },
       streak: { length: 1380, thickness: 7 },
       rays: [
         [-175, 266, 'faint'],
@@ -116,75 +127,68 @@
 </script>
 
 <script>
-  let { effect, color, layer } = $props();
+  let { effect, color } = $props();
 
   const parts = $derived(EFFECTS[effect]);
   const origin = $derived(parts?.origin ?? { x: 0, y: 0 });
 </script>
 
 {#if parts}
-  <span
-    class="aura {layer}"
-    style:--color={color}
-    style:--x={origin.x}
-    style:--y={origin.y}
-    aria-hidden="true"
-  >
-    {#if layer === 'back'}
-      <span class="halo" class:breathes={parts.halo.breathes} style:--reach={parts.halo.reach} style:--peak="{parts.halo.peak}%"></span>
-      {#if parts.streak}
-        <span class="streak" style:--length={parts.streak.length} style:--thickness={parts.streak.thickness}></span>
-      {/if}
-    {:else}
-      {#each parts.rays ?? [] as [angle, reach, level], i}
+  <span class="aura" style:--color={color} style:--x={origin.x} style:--y={origin.y} aria-hidden="true">
+    <span class="halo" class:breathes={parts.halo.breathes} style:--reach={parts.halo.reach} style:--peak="{parts.halo.peak}%"></span>
+
+    {#if parts.streak}
+      <span
+        class="streak"
+        style:--length={parts.streak.length}
+        style:--thickness={parts.streak.thickness}
+        style:--strength={STREAK_OPACITY}
+      ></span>
+    {/if}
+
+    {#each parts.rays ?? [] as [angle, reach, level], i}
+      <span
+        class="ray"
+        style:--from={RAY.start}
+        style:--length={(reach - RAY.start) * RAY.length}
+        style:--thickness={RAY.thickness}
+        style:--level={RAY.levels[level]}
+        style:rotate="{angle}deg"
+        style:animation-duration="{rayPeriod(i)}s"
+        style:animation-delay="{rayOffset(i)}s"
+      ></span>
+    {/each}
+
+    {#if parts.sparkles}
+      {@const { period, spots } = parts.sparkles}
+      {#each spots as spot, i}
         <span
-          class="ray"
-          style:--from={RAY.start}
-          style:--length={reach - RAY.start}
-          style:--thickness={RAY.thickness}
-          style:--level={LEVELS[level]}
-          style:rotate="{angle}deg"
-          style:animation-duration="{rayPeriod(i)}s"
-          style:animation-delay="{rayOffset(i)}s"
+          class="sparkle"
+          style:--span={spot.span}
+          style:left="calc(var(--unit) * {spot.x})"
+          style:top="calc(var(--unit) * {spot.y})"
+          style:animation-duration="{period}s"
+          style:animation-delay="{(-i * period) / spots.length}s"
         ></span>
       {/each}
-
-      {#if parts.sparkles}
-        {@const { period, spots } = parts.sparkles}
-        {#each spots as spot, i}
-          <span
-            class="sparkle"
-            style:--span={spot.span}
-            style:left="calc(var(--unit) * {spot.x})"
-            style:top="calc(var(--unit) * {spot.y})"
-            style:animation-duration="{period}s"
-            style:animation-delay="{(-i * period) / spots.length}s"
-          ></span>
-        {/each}
-      {/if}
     {/if}
   </span>
 {/if}
 
 <style>
-  /* A zero-size point at the centre of the effect; never part of the layout. */
+  /*
+   * A zero-size point at the centre of the effect; never part of the
+   * layout. The negative z-index puts every piece behind the icon and the
+   * division plate.
+   */
   .aura {
     position: absolute;
     left: calc(50% + var(--unit) * var(--x));
     top: calc(50% + var(--unit) * var(--y));
+    z-index: -1;
     width: 0;
     height: 0;
     pointer-events: none;
-  }
-
-  .back {
-    z-index: -1;
-  }
-
-  /* Over the icon, light adds to what is underneath instead of covering it. */
-  .front {
-    z-index: 1;
-    mix-blend-mode: plus-lighter;
   }
 
   .aura > * {
@@ -237,6 +241,7 @@
       transparent
     );
     filter: blur(calc(var(--unit) * 1.5));
+    opacity: var(--strength);
     animation: shimmer 3.6s ease-in-out infinite;
   }
 
@@ -309,7 +314,7 @@
   @keyframes shimmer {
     50% {
       scale: 0.86 1;
-      opacity: 0.65;
+      opacity: calc(var(--strength) * 0.65);
     }
   }
 
