@@ -30,7 +30,7 @@
     width: 900px;
     aspect-ratio: 1;
     translate: -50% -50%;
-    background: radial-gradient(closest-side, color-mix(in srgb, var(--tier) 20%, transparent), transparent);
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--tier) 25%, transparent), transparent);
     animation: breathe 9s ease-in-out infinite;
   }
 
@@ -77,11 +77,21 @@
     mask: radial-gradient(900px 520px at 85% 0%, #000, transparent 75%);
   }
 
-  /* The thin angular rule that frames the top of the Overwatch site. */
+  /*
+   * The thin angular rule that frames the top of the Overwatch site: a
+   * line in from each side that steps up and runs on behind the nav bar.
+   *
+   * The two lines sit in the middle of the gap between the nav bar and the
+   * panels below it, at every screen size, so they never run along the
+   * edge of either. --nav-bottom is where the nav bar ends (its 14px
+   * margin and 58px height, in SiteHeader.svelte); the panels start one
+   * gutter below that.
+   */
   .frame {
+    --nav-bottom: 72px;
     position: absolute;
     inset: 0 0 auto;
-    height: 96px;
+    height: calc(var(--nav-bottom) + var(--gutter) / 2);
     border-bottom: 1px solid rgb(160 185 255 / 0.16);
     background: linear-gradient(180deg, rgb(120 150 255 / 0.1), transparent);
     clip-path: polygon(0 0, 100% 0, 100% 100%, calc(100% - 300px) 100%, calc(100% - 330px) calc(100% - 14px), 330px calc(100% - 14px), 300px 100%, 0 100%);
