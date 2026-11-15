@@ -4,6 +4,7 @@
 -->
 <script>
   import Backdrop from '@/components/Backdrop.svelte';
+  import CustomCursor from '@/components/CustomCursor.svelte';
   import SiteFooter from '@/components/SiteFooter.svelte';
   import SiteHeader from '@/components/SiteHeader.svelte';
   import Toasts from '@/components/Toasts.svelte';
@@ -39,6 +40,7 @@
 
   <SiteFooter />
   <Toasts />
+  <CustomCursor />
 </div>
 
 <style>

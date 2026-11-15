@@ -1,36 +1,18 @@
 /*
- * Site cursor set (assets/cursors).
+ * Which cursor each kind of element gets.
  *
- * A .cur file cannot be resized by the browser, so the site uses PNGs made
- * from the .cur files by scripts/extract-cursors.mjs and declares them as
- * "1.5x" images, which draws them at (pixel size ÷ 1.5).
+ * `--cursor` names one of the site's cursors (default, link, text). The
+ * CustomCursor component reads it from whatever is under the mouse and draws
+ * the matching image from src/lib/cursor/cursors.js. The property inherits,
+ * so everything inside a button is a "link" too.
  *
- * To change the size, change the 1.5x (bigger number = smaller cursor) and
- * scale the hotspots to match:
- * hotspot = (hotspot printed by the script) ÷ (that number).
- *
- * Keep every cursor at or under 32×32 CSS pixels (48 image pixels at 1.5x).
- * Chrome swaps any larger custom cursor for the system arrow whenever it
- * overlaps the edge of the page, e.g. over the footer.
- *
- * Browsers that cannot do this keep the system cursor of the same meaning.
+ * To give something else the finger, set `--cursor: link` on it (and
+ * `cursor: pointer`, the system cursor used on touch screens and anywhere
+ * the custom cursor is not running).
  */
 :root {
-  --cursor-default: auto;
-  --cursor-link: pointer;
-  --cursor-text: text;
-}
-
-@supports (cursor: image-set(url('x.png') 1.5x) 0 0, auto) {
-  :root {
-    --cursor-default: image-set(url('../../assets/cursors/overwatch_pointer.png') 1.5x) 1 1, auto;
-    --cursor-link: image-set(url('../../assets/cursors/overwatch_finger.png') 1.5x) 11 1, pointer;
-    --cursor-text: image-set(url('../../assets/cursors/overwatch_text.png') 1.5x) 9 13, text;
-  }
-}
-
-html {
-  cursor: var(--cursor-default);
+  --cursor: default;
+  cursor: default;
 }
 
 a,
@@ -38,17 +20,32 @@ button,
 summary,
 select,
 label[for],
+label:has(input[type='file'], input[type='checkbox'], input[type='radio']),
 [role='button'],
-[role='tab'] {
-  cursor: var(--cursor-link);
+[role='tab'],
+.btn {
+  --cursor: link;
+  cursor: pointer;
 }
 
-input:not([type='button'], [type='submit'], [type='checkbox'], [type='radio'], [type='range']),
+input:not([type='button'], [type='submit'], [type='checkbox'], [type='radio'], [type='range'], [type='file']),
 textarea,
 [contenteditable='true'] {
-  cursor: var(--cursor-text);
+  --cursor: text;
+  cursor: text;
 }
 
 :disabled {
-  cursor: var(--cursor-default);
+  --cursor: default;
+  cursor: default;
+}
+
+/*
+ * While the custom cursor is being drawn, hide the system one everywhere so
+ * there are never two. CustomCursor adds and removes this class.
+ */
+html.custom-cursor,
+html.custom-cursor *,
+html.custom-cursor ::backdrop {
+  cursor: none !important;
 }
