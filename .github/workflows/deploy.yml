@@ -24,6 +24,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history: article and sitemap dates come from git (scripts/site/dates.js).
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -31,6 +34,8 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      # Links, sitemap, structured data and article checks on the built site.
+      - run: npm run check:site
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

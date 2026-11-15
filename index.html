@@ -4,11 +4,67 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0a1230" />
+    <!-- Double-brace placeholders are filled in from site.config.js by scripts/site/vitePlugin.js. -->
+    <meta name="theme-color" content="{{THEME_COLOR}}" />
+    <meta name="description" content="{{SITE_DESCRIPTION}}" />
     <meta
-      name="description"
-      content="Interactive competitive rank distribution: move across the curve to see which rank sits at every percentile."
+      name="keywords"
+      content="overwatch rank distribution, overwatch 2 rank distribution, overwatch rank percentiles, overwatch rank percentage by tier, overwatch sr distribution, what rank is top 10% overwatch"
     />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="author" content="{{AUTHOR_NAME}}" />
+    <link rel="canonical" href="{{SITE_URL}}" />
+    <meta property="og:site_name" content="{{SITE_NAME}}" />
+    <meta property="og:locale" content="{{SITE_LOCALE}}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="{{SITE_NAME}}" />
+    <meta property="og:description" content="{{SITE_DESCRIPTION}}" />
+    <meta property="og:url" content="{{SITE_URL}}" />
+    <meta property="og:image" content="{{OG_IMAGE}}" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="{{OG_IMAGE_WIDTH}}" />
+    <meta property="og:image:height" content="{{OG_IMAGE_HEIGHT}}" />
+    <meta property="og:image:alt" content="{{OG_IMAGE_ALT}}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="{{SITE_NAME}}" />
+    <meta name="twitter:description" content="{{SITE_DESCRIPTION}}" />
+    <meta name="twitter:image" content="{{OG_IMAGE}}" />
+    <meta name="twitter:image:alt" content="{{OG_IMAGE_ALT}}" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <!-- Relative on purpose: Vite leaves manifest links alone and the site is served from a sub-path. -->
+    <link rel="manifest" href="site.webmanifest" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "{{SITE_URL}}#website",
+            "name": "{{SITE_NAME}}",
+            "url": "{{SITE_URL}}",
+            "description": "{{SITE_DESCRIPTION}}",
+            "inLanguage": "en"
+          },
+          {
+            "@type": "WebApplication",
+            "@id": "{{SITE_URL}}#app",
+            "name": "{{SITE_NAME}}",
+            "url": "{{SITE_URL}}",
+            "description": "Interactive chart of the Overwatch competitive rank distribution. Move across the bell curve to see the rank, SR and percentile at every point, find your own rank, and compare two ranks. Estimates are fitted from community-submitted datapoints; unofficial fan project, not affiliated with Blizzard Entertainment.",
+            "applicationCategory": "ReferenceApplication",
+            "operatingSystem": "Any (web browser)",
+            "browserRequirements": "Requires JavaScript",
+            "isAccessibleForFree": true,
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+            "image": "{{OG_IMAGE}}",
+            "inLanguage": "en",
+            "isPartOf": { "@id": "{{SITE_URL}}#website" },
+            "about": { "@type": "VideoGame", "name": "Overwatch" },
+            "author": { "@type": "Person", "name": "{{AUTHOR_NAME}}", "url": "{{AUTHOR_URL}}" }
+          }
+        ]
+      }
+    </script>
     <link rel="icon" type="image/png" href="/assets/images/favicon.png" />
     <title>Overwatch Rank Distribution</title>
 
@@ -18,10 +74,15 @@
         background: #0a1230;
       }
     </style>
-    <!-- What the loading screen needs. The rest of the styles come with the app (src/main.js). -->
+    <!--
+      What shows before the app does: the loading screen, and the "about"
+      block at the end of the page. The rest of the styles come with the app
+      (src/main.js).
+    -->
     <link rel="stylesheet" href="/src/styles/tokens.css" />
     <link rel="stylesheet" href="/src/styles/fonts.css" />
     <link rel="stylesheet" href="/src/styles/loader.css" />
+    <link rel="stylesheet" href="/src/styles/home-about.css" />
     <noscript>
       <style>
         .loader {
@@ -75,5 +136,34 @@
 
     <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
+
+    <!-- ===== Crawlable summary (begin) =====
+         Static text and links for search engines and for visitors without
+         JavaScript. It is visible to everyone, below the app. Article links
+         are filled in from scripts/site/articles at build time. -->
+    <section class="home-about" aria-labelledby="home-about-title">
+      <noscript>
+        <p class="home-about-noscript">The interactive chart needs JavaScript. The guides below work without it.</p>
+      </noscript>
+      <h2 id="home-about-title">About the Overwatch rank distribution chart</h2>
+      <p>
+        This interactive chart shows how Overwatch competitive players are spread across the ranks, from Bronze to
+        Champion. Move across the bell curve to see which rank sits at each SR and percentile, what share of players
+        is in each tier and division, and how far it is to the next division. Use the finder to jump to an SR, a
+        percentage of players to beat, or a rank, and pin two ranks to compare them.
+      </p>
+      <p>
+        The curve for each season is fitted to community-submitted datapoints, each checked against a screenshot, so
+        every figure is an estimate rather than an official Blizzard statistic.
+      </p>
+      <h3>Guides</h3>
+      <ul>
+          {{ARTICLE_LINKS}}
+      </ul>
+      <p class="home-about-small">
+        <a href="articles/">All articles</a> · Unofficial fan project, not affiliated with Blizzard Entertainment.
+      </p>
+    </section>
+    <!-- ===== Crawlable summary (end) ===== -->
   </body>
 </html>
