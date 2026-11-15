@@ -7,7 +7,7 @@
 @property --tier {
   syntax: '<color>';
   inherits: true;
-  initial-value: #6ea6ff;
+  initial-value: #5d9ef2;
 }
 
 :root {

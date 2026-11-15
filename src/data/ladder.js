@@ -5,6 +5,8 @@
  * A tier starts at `minSr` and runs up to the next tier's `minSr`, so the
  * widths fall out of this list (Bronze is 1000 SR wide, the rest 500).
  *
+ * `color` is the tier's official accent colour.
+ *
  * `icon.width` / `icon.height` are the pixel sizes of the cropped artwork in
  * `assets/images`. The crops all come from the same canvas, so RankBadge uses
  * these numbers to draw every icon at one shared scale. Update them if an
@@ -19,21 +21,21 @@ export const LADDER_CONFIG = {
       id: 'bronze',
       name: 'Bronze',
       minSr: 0,
-      color: '#d07c46',
+      color: '#ce7a54',
       icon: { file: 'Rank_Bronze_c.png', width: 422, height: 357 },
     },
     {
       id: 'silver',
       name: 'Silver',
       minSr: 1000,
-      color: '#b4bdc9',
+      color: '#c6c8ca',
       icon: { file: 'Rank_Silver_c.png', width: 346, height: 417 },
     },
     {
       id: 'gold',
       name: 'Gold',
       minSr: 1500,
-      color: '#ecb746',
+      color: '#daa73e',
       icon: { file: 'Rank_Gold_c.png', width: 388, height: 422 },
     },
     {
@@ -41,21 +43,21 @@ export const LADDER_CONFIG = {
       name: 'Platinum',
       aliases: ['plat'],
       minSr: 2000,
-      color: '#8fd2dc',
+      color: '#98d9ba',
       icon: { file: 'Rank_Platinum_c.png', width: 389, height: 419 },
     },
     {
       id: 'emerald',
       name: 'Emerald',
       minSr: 2500,
-      color: '#35d695',
+      color: '#00d87f',
       icon: { file: 'Rank_Emerald_c.png', width: 382, height: 418 },
     },
     {
       id: 'diamond',
       name: 'Diamond',
       minSr: 3000,
-      color: '#6ea6ff',
+      color: '#5d9ef2',
       icon: { file: 'Rank_Diamond_c.png', width: 431, height: 408 },
     },
     {
@@ -63,7 +65,7 @@ export const LADDER_CONFIG = {
       name: 'Master',
       aliases: ['masters'],
       minSr: 3500,
-      color: '#b4f0d6',
+      color: '#8ae956',
       icon: { file: 'Rank_Master_c.png', width: 432, height: 348 },
     },
     {
@@ -71,7 +73,7 @@ export const LADDER_CONFIG = {
       name: 'Grandmaster',
       aliases: ['grandmasters', 'gm'],
       minSr: 4000,
-      color: '#a99bff',
+      color: '#8b6ffc',
       icon: { file: 'Rank_Grandmaster_c.png', width: 430, height: 273 },
     },
     {
@@ -79,7 +81,7 @@ export const LADDER_CONFIG = {
       name: 'Champion',
       aliases: ['champions', 'champ'],
       minSr: 4500,
-      color: '#d683f5',
+      color: '#cd7dfc',
       icon: { file: 'Rank_Champion_c.png', width: 430, height: 313 },
     },
   ],
