@@ -5,7 +5,7 @@
   import { clamp } from '@/lib/math/util.js';
   import { app } from '@/lib/state/app.svelte.js';
 
-  const BRACKET_Y = 38;
+  const BRACKET_Y = 47;
   /** Half the widest label, to keep it inside the plot. */
   const LABEL_HALF_WIDTH = 118;
 

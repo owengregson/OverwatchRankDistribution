@@ -17,7 +17,7 @@
 
 <g class="cursor">
   <!-- A zero-width line has no bounding box for a gradient, so the stem is a thin rect. -->
-  <rect class="stem" x={x - 0.75} y={s.top - 26} width="1.5" height={s.bottom - s.top + 26} fill="url(#{ids.cursor})" />
+  <rect class="stem" x={x - 0.75} y={s.top - 12} width="1.5" height={s.bottom - s.top + 12} fill="url(#{ids.cursor})" />
 
   <g style:transform="translate({x}px, {y}px)">
     <circle class="pulse" r="7" />

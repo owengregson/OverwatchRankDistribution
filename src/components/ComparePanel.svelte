@@ -27,26 +27,16 @@
 
   {#if comparison}
     <div class="body" in:slide>
-      <div class="pair">
-        <div class="side">
-          <RankBadge tier={pinned.tier} division={pinned.division.number} size={40} />
-          <div>
-            <div class="display rank">{pinned.division.name}</div>
-            <div class="numeric meta">{formatSr(pinned.sr)} SR · pinned</div>
-          </div>
+      <div class="side">
+        <RankBadge tier={pinned.tier} division={pinned.division.number} size={40} />
+        <div>
+          <div class="display rank">{pinned.division.name}</div>
+          <div class="numeric meta">{formatSr(pinned.sr)} SR · pinned</div>
         </div>
+      </div>
 
-        <div class="arrow" class:down={direction < 0} class:flat={direction === 0} aria-hidden="true">
-          <span></span><span></span><span></span>
-        </div>
-
-        <div class="side">
-          <RankBadge tier={reading.tier} division={reading.division.number} size={40} />
-          <div>
-            <div class="display rank">{reading.division.name}</div>
-            <div class="numeric meta">{formatSr(reading.sr)} SR</div>
-          </div>
-        </div>
+      <div class="arrow" class:down={direction < 0} class:flat={direction === 0} aria-hidden="true">
+        <span></span><span></span><span></span>
       </div>
 
       <dl class="gap">
@@ -55,11 +45,11 @@
           <dd class="display numeric">{direction < 0 ? '−' : direction > 0 ? '+' : ''}{formatSr(comparison.srGap)}</dd>
         </div>
         <div>
-          <dt class="eyebrow">Players between</dt>
+          <dt class="eyebrow">Between</dt>
           <dd class="display numeric">{formatPercent(comparison.playersBetween)}</dd>
         </div>
         <div>
-          <dt class="eyebrow">Ladder gap</dt>
+          <dt class="eyebrow">Ladder</dt>
           <dd class="display numeric">{plural(comparison.divisionGap, 'div')}</dd>
         </div>
       </dl>
@@ -125,16 +115,12 @@
     text-wrap: pretty;
   }
 
+  /* One row: the pinned rank, chevrons pointing at the cursor's rank, then the gap. */
   .body {
     display: grid;
-    gap: 12px;
-  }
-
-  .pair {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    grid-template-columns: auto auto 1fr;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
   }
 
   .side {
@@ -155,16 +141,20 @@
     white-space: nowrap;
   }
 
-  /* Three chevrons that pulse in sequence towards the cursor's rank. */
+  /* Chevrons pulse in sequence; they flip to point left when the cursor is below the pin. */
   .arrow {
     display: flex;
-    gap: 2px;
-    transition: rotate 300ms var(--ease-back);
+    gap: 1px;
+    transition: scale 300ms var(--ease-back);
+  }
+
+  .arrow.down {
+    scale: -1 1;
   }
 
   .arrow span {
-    width: 7px;
-    height: 7px;
+    width: 6px;
+    height: 6px;
     border-top: 2px solid var(--orange-hot);
     border-right: 2px solid var(--orange-hot);
     rotate: 45deg;
@@ -185,23 +175,24 @@
   }
 
   .gap {
-    display: grid;
-    grid-template-columns: repeat(3, auto);
+    display: flex;
     justify-content: space-between;
-    gap: 10px;
+    gap: 8px;
     margin: 0;
-    padding-top: 10px;
-    border-top: 1px solid var(--line);
+    padding-left: 10px;
+    border-left: 1px solid var(--line);
   }
 
   .gap dt {
-    font-size: 10px;
+    font-size: 9px;
+    letter-spacing: 0.1em;
   }
 
   .gap dd {
-    margin: 2px 0 0;
-    font-size: 25px;
+    margin: 1px 0 0;
+    font-size: 21px;
     color: var(--ice-50);
+    white-space: nowrap;
   }
 
   @keyframes chevron {
