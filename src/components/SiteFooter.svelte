@@ -7,6 +7,11 @@
     made with <span class="heart" role="img" aria-label="love">❤️</span> by
     <a href={AUTHOR.url} target="_blank" rel="noopener noreferrer">{AUTHOR.handle}</a>
   </span>
+  <!-- Static pages built by scripts/site (relative: the site may live under a sub-path). -->
+  <nav class="links" aria-label="Guides">
+    <a href="articles/">Rank distribution guides</a>
+    <a href="articles/faq/">FAQ</a>
+  </nav>
   <span>Unofficial fan project, not affiliated with Blizzard Entertainment.</span>
 </footer>
 
@@ -23,6 +28,11 @@
 
   .credit {
     color: var(--ice-400);
+  }
+
+  .links {
+    display: flex;
+    gap: 16px;
   }
 
   .heart {
