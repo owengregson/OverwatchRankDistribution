@@ -48,11 +48,13 @@
     }
 
     /**
-     * A modal <dialog> opened after us would cover the cursor, because the
-     * top layer stacks in opening order. Re-open the popover to go back on top.
+     * A modal <dialog> or another popover (a dropdown's list) opened after
+     * us would cover the cursor, because the top layer stacks in opening
+     * order. Re-open the popover to go back on top.
      */
     function stayAboveDialogs() {
-      const modal = document.querySelector(':modal');
+      const others = [...document.querySelectorAll(':modal, :popover-open')].filter((other) => other !== element);
+      const modal = others.at(-1) ?? null;
       if (modal === lastModal) return;
       lastModal = modal;
       if (modal && element.showPopover) {
@@ -109,6 +111,8 @@
         if (!visible) return;
         lastTarget = document.elementFromPoint(x, y);
         kind = kindOf(lastTarget);
+        // The click may have opened a dropdown's list on top of the cursor.
+        stayAboveDialogs();
       }, 120);
     }
 

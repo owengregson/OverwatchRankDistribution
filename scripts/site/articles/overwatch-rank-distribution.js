@@ -20,8 +20,8 @@ export default {
     return `
 <p>The Overwatch rank distribution is the answer to a simple question: out of everyone who plays competitive, how many end up in each rank? This page walks through the current estimate for ${d.season.name}, explains why the ranks form a bell curve, and shows where the middle, the top and the bottom of the ladder sit. If you would rather explore than read, ${h.chart('the interactive rank distribution chart')} lets you move across the curve and see the rank and percentile at every point.</p>
 
-${h.bell({
-  label: `Bell curve of the ${d.season.name} Overwatch rank distribution, coloured by tier from Bronze to Champion.`,
+${h.curve({
+  label: `Curve of the ${d.season.name} Overwatch rank distribution, coloured by tier from Bronze to Champion.`,
   caption: `The estimated ${d.season.name} rank distribution. The height of the curve is how many players sit at each SR; each colour is one tier.`,
   markers: [{ sr: d.median.sr, label: `Median: ${d.median.division.name}` }],
 })}
@@ -61,7 +61,7 @@ ${h.tierTable()}
 
 <h2>What this distribution is not</h2>
 <p>A few limits are worth knowing before you quote these numbers anywhere.</p>
-<p><strong>It is an estimate.</strong> Blizzard does not publish a full rank distribution. The curve here is fitted to ${d.datapoints.length} datapoint${d.datapoints.length === 1 ? '' : 's'} that players submitted with screenshots, each saying what share of players a given rank is better than. A bell curve through those points fills in the rest of the ladder. Ranks close to the datapoints are the best supported; ranks far from them rely more on the bell-curve assumption. The ${h.a('how-the-estimate-works', 'methodology page')} explains the fit.</p>
+<p><strong>It is an estimate.</strong> Blizzard does not publish a full rank distribution. The curve here is fitted to ${d.datapoints.length} datapoint${d.datapoints.length === 1 ? '' : 's'} that players submitted with screenshots, each saying what share of players a given rank is better than. ${d.isBellFit ? 'A bell curve through those points fills in the rest of the ladder' : 'A curve drawn through those points fills in the rest of the ladder'}. Ranks close to the datapoints are the best supported; ranks far from them rely more on the assumption that the curve is bell-shaped there. The ${h.a('how-the-estimate-works', 'methodology page')} explains the fit.</p>
 <p><strong>It is one curve.</strong> Overwatch keeps a separate rank for each role queue, and those distributions are not identical. This site does not split by role; it shows a single distribution for the season.</p>
 <p><strong>The SR numbers are a scale, not the game's hidden rating.</strong> The game shows your rank and division rather than a public SR number. The site places the ladder on a 0 to ${d.sr(d.ladder.maxSr)} SR scale so that distances between ranks can be measured. The ${h.a('sr-by-rank', 'SR by rank page')} lists the range for every division.</p>
 

@@ -31,28 +31,28 @@ ${h.estimateNote()}
 <h2>Season by season</h2>
 <div class="table-wrap panel"><table>
   <caption>Estimated rank distribution for each season</caption>
-  <thead><tr><th scope="col">Season</th><th scope="col">Datapoints</th><th scope="col">Ladder</th><th scope="col">Median rank</th><th scope="col">Most common tier</th><th scope="col">Diamond or higher</th><th scope="col">Master or higher</th><th scope="col">Grandmaster or higher</th></tr></thead>
+  <thead><tr><th scope="col">Season</th><th scope="col">Datapoints</th><th scope="col">Curve</th><th scope="col">Ladder</th><th scope="col">Median rank</th><th scope="col">Most common tier</th><th scope="col">Diamond or higher</th><th scope="col">Master or higher</th><th scope="col">Grandmaster or higher</th></tr></thead>
   <tbody>
 ${[...rows]
   .reverse()
   .map(
     ({ s, median, common, top }) =>
-      `    <tr><th scope="row">${s.name}</th><td>${s.model.points.length}</td><td>${hasEmerald(s) ? 'With Emerald' : 'Before Emerald'}</td><td>${median.division.name}</td><td>${common.tier.name} (${d.pct(common.share)})</td><td>${d.pct(top('diamond'))}</td><td>${d.pct(top('master'))}</td><td>${d.pct(top('grandmaster'))}</td></tr>`,
+      `    <tr><th scope="row">${s.name}</th><td>${s.model.points.length}</td><td>${s.model.label}</td><td>${hasEmerald(s) ? 'With Emerald' : 'Before Emerald'}</td><td>${median.division.name}</td><td>${common.tier.name} (${d.pct(common.share)})</td><td>${d.pct(top('diamond'))}</td><td>${d.pct(top('master'))}</td><td>${d.pct(top('grandmaster'))}</td></tr>`,
   )
   .join('\n')}
   </tbody>
 </table></div>
 
 <h2>Reading the season table</h2>
-<p>Each column answers a question players ask about a season. <strong>Datapoints</strong> is how many approved observations the curve was fitted to; it is the first thing to check, because it says how much evidence sits behind the rest of the row. <strong>Ladder</strong> says whether the season was played before or after the Emerald tier was added between Platinum and Diamond. <strong>Median rank</strong> is the division of the player exactly in the middle. <strong>Most common tier</strong> is the tier with the largest share of players, with that share in brackets. The last three columns are cumulative: the share of players at or above the first division of Diamond, Master and Grandmaster.</p>
+<p>Each column answers a question players ask about a season. <strong>Datapoints</strong> is how many approved observations the curve was fitted to; it is the first thing to check, because it says how much evidence sits behind the rest of the row. <strong>Curve</strong> is how the season's curve is made from them: "Bell curve" is the bell closest to a few community datapoints, and "Follows the data" is a curve drawn through every datapoint, used when a season's distribution is known across the ladder. The ${h.a('how-the-estimate-works', 'methodology page')} describes both. <strong>Ladder</strong> says whether the season was played before or after the Emerald tier was added between Platinum and Diamond. <strong>Median rank</strong> is the division of the player exactly in the middle. <strong>Most common tier</strong> is the tier with the largest share of players, with that share in brackets. The last three columns are cumulative: the share of players at or above the first division of Diamond, Master and Grandmaster.</p>
 <p>Cumulative shares are the most practical way to compare seasons, because they do not depend on how the middle of the ladder is split. If "Master or higher" grows from one season to the next, it is easier to reach the top tiers that season, whatever happened to the tiers below.</p>
 <p>For any single rank, the most direct comparison is its percentile in each season: the share of players that rank was better than. The season tabs on the chart switch the whole curve, so you can pin a rank, change season and watch its percentile move.</p>
 
 <h2>${d.season.name}</h2>
-<p>The latest season's curve is centred on about ${d.sr(d.model.params.mean)} SR on this site's scale, with a standard deviation of about ${d.sr(d.model.params.sd)} SR. The median player is in ${d.median.division.name}, and the most common tier is ${d.mostCommonTier.name} with ${d.pct(d.mostCommonTier.share)} of players. It is fitted to ${d.datapoints.length} datapoint${d.datapoints.length === 1 ? '' : 's'}: ${d.datapoints.map((p) => `${p.label} better than ${d.pct(p.p)}`).join('; ')}.</p>
+<p>The latest season's curve is centred on about ${d.sr(d.model.mean)} SR on this site's scale, with a standard deviation of about ${d.sr(d.model.sd)} SR. The median player is in ${d.median.division.name}, and the most common tier is ${d.mostCommonTier.name} with ${d.pct(d.mostCommonTier.share)} of players. It is fitted to ${d.datapoints.length} datapoint${d.datapoints.length === 1 ? '' : 's'}: ${d.datapoints.map((p) => `${p.label} better than ${d.pct(p.p)}`).join('; ')}.</p>
 
-${h.bell({
-  label: `Bell curve of the ${d.season.name} Overwatch rank distribution.`,
+${h.curve({
+  label: `Curve of the ${d.season.name} Overwatch rank distribution.`,
   caption: `The ${d.season.name} rank distribution, coloured by tier.`,
   markers: [{ sr: d.median.sr, label: `Median: ${d.median.division.name}` }],
 })}
@@ -75,7 +75,7 @@ ${single ? '' : `<h2>What changed between seasons</h2>
 </ul>
 
 <h2>How a new season gets a curve</h2>
-<p>A season starts with no datapoints and stays hidden from visitors. Players submit what share of players their rank is better than, with a screenshot, and an admin checks each one against its screenshot before approving it. Once a season has at least two approved datapoints at different ranks, a bell curve can be fitted and the season appears on the chart. Every approved datapoint after that refines the fit.</p>
+<p>A season starts with no datapoints and stays hidden from visitors. Players submit what share of players their rank is better than, with a screenshot, and an admin checks each one against its screenshot before approving it. Once a season has at least two approved datapoints at different ranks, a curve can be fitted and the season appears on the chart. Every approved datapoint after that refines the fit.</p>
 <p>The article pages are rebuilt from the seasons bundled with the site each time it is deployed, so the tables here follow the data. The interactive chart loads the latest approved datapoints directly, so it can be a step ahead of these pages between deploys.</p>
 
 <h2>Comparing seasons fairly</h2>

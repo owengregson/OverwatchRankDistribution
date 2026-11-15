@@ -1,16 +1,49 @@
 import { resolveDatapoints } from './datapoints.js';
+import { fitFreeform } from './fitFreeform.js';
 import { fitNormal } from './fitNormal.js';
 
 /**
- * Curve families a season can ask for via its `"model"` field.
+ * The curves a season can ask for with its `"model"` field.
+ *
+ * `normal` assumes a bell curve and finds the one closest to the datapoints:
+ * right for a handful of community figures, which are few, bunched together
+ * and a little noisy. `freeform` assumes nothing and passes through every
+ * datapoint: right for a season whose whole distribution is known, which it
+ * then reproduces, bumps and all.
+ *
  * To add one, write a fitter with the same signature and return shape as
- * `fitNormal` ({ type, label, params, cdf, pdf, quantile }) and register it here.
+ * `fitNormal` ({ type, params, cdf, pdf, quantile }) and register it here.
  */
-const FITTERS = {
-  normal: fitNormal,
+const MODELS = {
+  normal: { label: 'Bell curve', fit: fitNormal },
+  freeform: { label: 'Follows the data', fit: fitFreeform },
 };
 
 export const DEFAULT_MODEL = 'normal';
+
+/** Every model as { id, label }, for choosing one. */
+export const MODEL_CHOICES = Object.entries(MODELS).map(([id, { label }]) => ({ id, label }));
+
+/** SR between the slices the curve is cut into to measure its mean and spread. */
+const MOMENT_STEP = 5;
+
+/**
+ * The mean and standard deviation of a fitted curve, in SR, measured from
+ * the curve itself so they mean the same thing whatever its shape.
+ */
+function moments({ cdf, minSr, maxSr }) {
+  let mean = 0;
+  let square = 0;
+  let below = cdf(minSr);
+  for (let sr = minSr; sr < maxSr; sr += MOMENT_STEP) {
+    const upTo = cdf(Math.min(sr + MOMENT_STEP, maxSr));
+    const middle = sr + MOMENT_STEP / 2;
+    mean += middle * (upTo - below);
+    square += middle * middle * (upTo - below);
+    below = upTo;
+  }
+  return { mean, sd: Math.sqrt(Math.max(0, square - mean * mean)) };
+}
 
 /**
  * Builds the distribution for a season purely from its datapoints.
@@ -20,13 +53,20 @@ export const DEFAULT_MODEL = 'normal';
  */
 export function buildSeasonModel(season, ladder) {
   const type = season.model ?? DEFAULT_MODEL;
-  const fit = FITTERS[type];
-  if (!fit) {
-    throw new Error(`Unknown model "${type}". Available: ${Object.keys(FITTERS).join(', ')}.`);
+  const chosen = MODELS[type];
+  if (!chosen) {
+    throw new Error(`Unknown model "${type}". Available: ${Object.keys(MODELS).join(', ')}.`);
   }
 
   const resolved = resolveDatapoints(season.datapoints, ladder);
-  const model = fit(resolved, { minSr: ladder.minSr, maxSr: ladder.maxSr });
+  const lowest = ladder.divisions[0];
+  const highest = ladder.divisions.at(-1);
+  const model = chosen.fit(resolved, {
+    minSr: ladder.minSr,
+    maxSr: ladder.maxSr,
+    floorWidth: lowest.maxSr - lowest.minSr,
+    ceilingWidth: highest.maxSr - highest.minSr,
+  });
 
   // Keep each datapoint alongside what the fitted curve says at the same SR,
   // so the UI can show how well the model agrees with the data.
@@ -39,7 +79,7 @@ export function buildSeasonModel(season, ladder) {
     points.reduce((sum, pt) => sum + pt.weight * pt.residual ** 2, 0) / totalWeight,
   );
 
-  return { ...model, points, rmse };
+  return { ...model, label: chosen.label, ...moments(model), points, rmse };
 }
 
 /**

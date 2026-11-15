@@ -9,7 +9,8 @@
  *
  *   Public
  *   listSeasons()                         → Season[] (with their datapoints)
- *   submitDatapoint({ seasonId, rank, betterThan, proof })   proof is a prepared image (lib/image.js)
+ *   submitDatapoint({ seasonId, rank, sr?, betterThan, proof })   proof is a prepared image (lib/image.js);
+ *                                         sr is the exact SR within the rank, when the visitor gave their rank progress
  *
  *   Admin (rejects unless signed in as an admin)
  *   getSession()                          → { email } | null
@@ -28,8 +29,10 @@
  * Shapes
  *   Season      { id, year, number, name, model, ladder?, datapoints: Datapoint[] }
  *               ladder is an id from src/data/ladder.js; without one the season is on the default ladder
+ *               model is the curve fitted to it, from src/lib/model/buildSeasonModel.js; 'normal' without one
  *   Datapoint   { id?, rank? | sr?, betterThan, weight?, note? }   betterThan is 0–100
- *   Submission  { id, seasonId, rank, betterThan, proofPath, status, createdAt, reviewedAt }
+ *   Submission  { id, seasonId, rank, sr, betterThan, proofPath, status, createdAt, reviewedAt }
+ *               sr is null for a submission that only names a rank; approving one with an sr makes an exact-SR datapoint
  *               status is 'pending' | 'approved' | 'denied'
  */
 import { SUPABASE } from '@/config.js';

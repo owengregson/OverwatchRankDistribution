@@ -4,6 +4,7 @@
 -->
 <script>
   import DatapointRow from '@/components/admin/DatapointRow.svelte';
+  import Select from '@/components/Select.svelte';
   import { srOf } from '@/lib/admin.js';
   import { formatSr } from '@/lib/format.js';
   import { app } from '@/lib/state/app.svelte.js';
@@ -21,14 +22,10 @@
 </script>
 
 <div class="toolbar">
-  <label class="field">
+  <div class="field">
     <span class="label">Season</span>
-    <select class="input" bind:value={seasonId}>
-      {#each app.seasons as option (option.id)}
-        <option value={option.id}>{option.name}</option>
-      {/each}
-    </select>
-  </label>
+    <Select bind:value={seasonId} label="Season" options={app.seasons.map((s) => ({ value: s.id, label: s.name }))} />
+  </div>
 
   {#if fit.model}
     <dl class="fit">
@@ -42,7 +39,7 @@
       </div>
       <div>
         <dt class="eyebrow">Spread</dt>
-        <dd class="display numeric">{formatSr(fit.model.params.sd)} <small>SR</small></dd>
+        <dd class="display numeric">{formatSr(fit.model.sd)} <small>SR</small></dd>
       </div>
       <div>
         <dt class="eyebrow">Average miss</dt>

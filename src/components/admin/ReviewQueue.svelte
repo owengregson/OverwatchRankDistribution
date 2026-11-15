@@ -10,6 +10,7 @@
   import RankBadge from '@/components/RankBadge.svelte';
   import { runAdminAction, srOf, timeAgo } from '@/lib/admin.js';
   import { backend, SUBMISSION_STATUSES } from '@/lib/backend/index.js';
+  import { formatSr } from '@/lib/format.js';
   import { dissolve, ms, slide } from '@/lib/motion.js';
   import { app } from '@/lib/state/app.svelte.js';
   import { toasts } from '@/lib/state/toasts.svelte.js';
@@ -113,7 +114,11 @@
           {/if}
           <div>
             <div class="display rank">{submission.rank}</div>
-            <div class="meta">{seasonName(submission.seasonId)} · {timeAgo(submission.createdAt)}</div>
+            <div class="meta">
+              {#if submission.sr !== null && submission.sr !== undefined}{formatSr(submission.sr)} SR · {/if}{seasonName(submission.seasonId)} · {timeAgo(
+                submission.createdAt,
+              )}
+            </div>
           </div>
         </div>
 
@@ -133,7 +138,7 @@
 
         <div class="decide">
           {#if status === 'pending'}
-            <label class="weight" title="How much this datapoint counts in the fit. 1 is normal.">
+            <label class="weight" title="How much this datapoint counts in a bell-curve fit, or against another at the same rank. 1 is normal.">
               <span class="eyebrow">Weight</span>
               <input
                 class="input compact"

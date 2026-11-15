@@ -22,8 +22,14 @@
       return { percent, x: s.x(sr), y: s.y(chart.densityAt(sr)) };
     }),
   );
-  /** A mark appears once the intro wipe has passed it. */
-  const revealed = (x) => chart.reveal >= (x - s.left) / s.innerW;
+  /** Room (px) the "Better than" caption takes at the left end of the ruler. */
+  const CAPTION_WIDTH = 100;
+  /**
+   * A mark appears once the intro wipe has passed it. One that would sit on
+   * the caption stays hidden: a curve with many players at the bottom of
+   * the ladder puts its lowest marks there.
+   */
+  const revealed = (x) => chart.reveal >= (x - s.left) / s.innerW && x >= s.left + CAPTION_WIDTH;
 </script>
 
 <g class="ruler">

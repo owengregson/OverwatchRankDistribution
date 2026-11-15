@@ -8,6 +8,7 @@ import season from '../src/data/seasons/2026-season-5.json';
 import { createLadder } from '../src/lib/ladder/createLadder.js';
 import { createIconSizing } from '../src/lib/ladder/iconSizing.js';
 import { ladderById, ladderOf } from '../src/lib/ladder/ladders.js';
+import { monotoneCurve } from '../src/lib/math/monotone.js';
 import { cdf, probit } from '../src/lib/math/normal.js';
 import { buildSeasonModel, tryBuildSeasonModel } from '../src/lib/model/buildSeasonModel.js';
 import { compareReadings, readAt, tierShares } from '../src/lib/model/reading.js';
@@ -126,23 +127,179 @@ describe('season model', () => {
   });
 });
 
-describe('2026 Season 4', () => {
-  // Its datapoints were read off a community graph of the season. These are
-  // that graph's shares of players per tier, in percent, Bronze first; the
-  // fitted curve should give them back.
-  const GRAPH_TIER_SHARES = [4.9, 11.1, 21.2, 26.1, 20.9, 11.1, 3.7, 0.8];
-  const model = buildSeasonModel(season4, ladder);
+describe('free-form model', () => {
+  const freeform = (datapoints, on = ladder) => buildSeasonModel({ model: 'freeform', datapoints }, on);
+  const spread = [
+    { rank: 'Silver 5', betterThan: 6 },
+    { rank: 'Gold 5', betterThan: 20 },
+    { rank: 'Emerald 5', betterThan: 70 },
+    { rank: 'Diamond 5', betterThan: 82 },
+    { rank: 'Master 5', betterThan: 93 },
+    { rank: 'Grandmaster 5', betterThan: 99.5 },
+  ];
 
-  it('reproduces the tier shares of the graph it was taken from', () => {
-    const fitted = tierShares(model, ladder).map(({ share }) => share * 100);
-    GRAPH_TIER_SHARES.forEach((share, i) => {
-      expect(Math.abs(fitted[i] - share)).toBeLessThan(0.3);
+  it('is the bell curve when there are only two datapoints', () => {
+    const bell = buildSeasonModel(season, ladder);
+    const free = freeform(season.datapoints);
+    // Not to the last decimal: the two treat the sliver of curve past the ends of the scale differently.
+    for (const sr of [500, 1500, 2600, 3700, 3800, 4600]) {
+      expect(free.cdf(sr)).toBeCloseTo(bell.cdf(sr), 3);
+    }
+    expect(free.cdf(3700)).toBeCloseTo(0.97, 9);
+    expect(free.cdf(3800)).toBeCloseTo(0.98, 9);
+  });
+
+  it('passes through every datapoint, whatever shape they make', () => {
+    const model = freeform(spread);
+    // No bell curve fits these: the same data misses by whole points.
+    expect(model.rmse).toBeLessThan(1e-9);
+    expect(buildSeasonModel({ datapoints: spread }, ladder).rmse).toBeGreaterThan(0.01);
+    for (const point of model.points) expect(point.fitted).toBeCloseTo(point.p, 9);
+  });
+
+  it('is a proper distribution over the SR range', () => {
+    const model = freeform(spread);
+    expect(model.cdf(0)).toBe(0);
+    expect(model.cdf(5000)).toBe(1);
+    let last = 0;
+    let area = 0;
+    for (let sr = 0; sr < 5000; sr += 1) {
+      const density = model.pdf(sr + 0.5);
+      expect(density).toBeGreaterThanOrEqual(0);
+      expect(model.cdf(sr + 1)).toBeGreaterThanOrEqual(last);
+      last = model.cdf(sr + 1);
+      area += density;
+    }
+    expect(area).toBeCloseTo(1, 5);
+  });
+
+  it('quantile inverts cdf', () => {
+    const model = freeform(spread);
+    for (const p of [0.001, 0.06, 0.25, 0.5, 0.97, 0.9999]) {
+      expect(model.cdf(model.quantile(p))).toBeCloseTo(p, 7);
+    }
+    expect(model.quantile(0)).toBe(0);
+    expect(model.quantile(1)).toBe(5000);
+  });
+
+  it('counts players the curve puts below the floor in the lowest division', () => {
+    // 3% below Bronze 4 is more than a bell tail fits into Bronze 5: the rest stacks up against 0 SR.
+    const model = freeform([
+      { rank: 'Bronze 4', betterThan: 3 },
+      { rank: 'Bronze 3', betterThan: 4 },
+      { rank: 'Gold 5', betterThan: 30 },
+      { rank: 'Diamond 5', betterThan: 90 },
+    ]);
+    const share = (name) => readAt(model, ladder, ladder.parseRank(name).minSr).divisionShare;
+    expect(share('Bronze 5')).toBeCloseTo(0.03, 9);
+    expect(share('Bronze 5')).toBeGreaterThan(share('Bronze 4') * 2);
+    expect(model.params.floorShare).toBeGreaterThan(0.01);
+    // Densest at the very bottom, thinning out towards the top of the division.
+    expect(model.pdf(0)).toBeGreaterThan(model.pdf(100));
+    expect(model.pdf(100)).toBeGreaterThan(model.pdf(199));
+  });
+
+  it('has no sudden steps: the curve is continuous from one SR to the next', () => {
+    const model = freeform(season4.datapoints);
+    let peak = 0;
+    for (let sr = 0; sr <= 5000; sr += 1) peak = Math.max(peak, model.pdf(sr));
+    for (let sr = 0; sr < 5000; sr += 1) {
+      expect(Math.abs(model.pdf(sr + 1) - model.pdf(sr))).toBeLessThan(peak * 0.02);
+    }
+  });
+
+  it('averages datapoints at the same SR by weight', () => {
+    const model = freeform([
+      { rank: 'Gold 5', betterThan: 20 },
+      { rank: 'Diamond 5', betterThan: 80 },
+      { rank: 'Diamond 5', betterThan: 90, weight: 3 },
+      { rank: 'Grandmaster 5', betterThan: 99.5 },
+    ]);
+    const at = model.cdf(3000);
+    expect(at).toBeGreaterThan(0.85);
+    expect(at).toBeLessThan(0.9);
+    expect(model.rmse).toBeGreaterThan(0);
+  });
+
+  it('passes between datapoints that contradict each other', () => {
+    const model = freeform([
+      { rank: 'Gold 5', betterThan: 20 },
+      { rank: 'Master 3', betterThan: 97 },
+      { rank: 'Master 2', betterThan: 96 },
+      { rank: 'Grandmaster 5', betterThan: 99.5 },
+    ]);
+    expect(model.cdf(3750)).toBeGreaterThan(0.96);
+    expect(model.cdf(3750)).toBeLessThan(0.97);
+    expect(model.cdf(3800)).toBeGreaterThan(model.cdf(3700));
+  });
+
+  it('rejects unusable datapoints with a clear message', () => {
+    expect(() => freeform([{ rank: 'Master 3', betterThan: 97 }])).toThrow(/at least two/);
+    expect(() => freeform([{ rank: 'Master 3', betterThan: 97 }, { rank: 'Master 2', betterThan: 96 }])).toThrow(/disagree/);
+  });
+});
+
+describe('mean and spread', () => {
+  it('are measured from the curve, and match the bell they came from', () => {
+    const model = buildSeasonModel(season, ladder);
+    expect(model.mean).toBeCloseTo(model.params.mean, 0);
+    expect(model.sd).toBeCloseTo(model.params.sd, 0);
+    expect(model.label).toBe('Bell curve');
+  });
+
+  it('are there for a curve of any shape', () => {
+    const model = buildSeasonModel(season4, ladder);
+    expect(model.label).toBe('Follows the data');
+    expect(model.mean).toBeGreaterThan(2000);
+    expect(model.mean).toBeLessThan(2500);
+    expect(model.sd).toBeGreaterThan(600);
+    expect(model.sd).toBeLessThan(900);
+  });
+});
+
+describe('2026 Season 4', () => {
+  // The share of players in each division on the community graph the season
+  // was taken from, in percent, Bronze 5 first. The graph stops at
+  // Grandmaster and its figures add up to 99.8. The season's datapoints
+  // are those figures added up from the bottom, exactly as given; what is
+  // left over, 0.2%, is Champion.
+  const GRAPH = [
+    [1.4, 0.6, 0.7, 1.0, 1.2],
+    [1.5, 1.8, 2.2, 2.6, 3.0],
+    [3.5, 3.9, 4.3, 4.6, 4.9],
+    [5.1, 5.3, 5.3, 5.3, 5.1],
+    [4.9, 4.6, 4.2, 3.8, 3.4],
+    [3.0, 2.6, 2.2, 1.8, 1.5],
+    [1.2, 0.9, 0.7, 0.5, 0.4],
+    [0.3, 0.2, 0.1, 0.1, 0.1],
+  ];
+  const model = buildSeasonModel(season4, ladder);
+  const shareOf = (division) => (model.cdf(division.maxSr) - model.cdf(division.minSr)) * 100;
+
+  it('gives back every division on the graph it was taken from', () => {
+    GRAPH.forEach((row, t) => {
+      row.forEach((share, d) => {
+        const division = ladder.tiers[t].divisions[d];
+        expect(shareOf(division), division.name).toBeCloseTo(share, 6);
+      });
     });
   });
 
-  it('agrees closely with every one of its datapoints', () => {
+  it('has the spike at Bronze 5 that a bell curve cannot', () => {
+    const [bronze5, bronze4] = ladder.tiers[0].divisions;
+    expect(shareOf(bronze5)).toBeGreaterThan(shareOf(bronze4) * 2);
+    const bell = buildSeasonModel({ ...season4, model: 'normal' }, ladder);
+    expect(bell.cdf(bronze5.maxSr)).toBeLessThan(bell.cdf(bronze4.maxSr) - bell.cdf(bronze5.maxSr));
+  });
+
+  it('passes through every one of its datapoints', () => {
     expect(model.points).toHaveLength(season4.datapoints.length);
-    expect(model.rmse).toBeLessThan(0.005);
+    expect(model.rmse).toBeLessThan(1e-9);
+  });
+
+  it('leaves what the graph does not account for to Champion', () => {
+    const champion = tierShares(model, ladder).at(-1).share * 100;
+    expect(champion).toBeCloseTo(0.2, 6);
   });
 
   it('puts the median in Platinum', () => {
@@ -189,19 +346,32 @@ describe('seasons before Emerald', () => {
   const classic = ladderById('classic');
   const sharesOf = (model) => tierShares(model, classic).map(({ share }) => share * 100);
 
-  it('gives back the official Season 17 tier shares to within about a point', () => {
-    // Percent of players per tier on the official graph, Bronze first (Champion is "<0.1%").
+  it('gives back the official Season 17 tier shares', () => {
+    // Percent of players per tier on the official graph, Bronze first. They add up to 100 without
+    // Champion, which the graph gives as "<0.1%": the curve takes its sliver out of Grandmaster.
     const OFFICIAL = [2.4, 12.6, 31.7, 34.9, 14.9, 3.2, 0.3];
     const fitted = sharesOf(buildSeasonModel(season17, ladderOf(season17)));
-    OFFICIAL.forEach((share, i) => expect(Math.abs(fitted[i] - share)).toBeLessThan(1.1));
+    OFFICIAL.forEach((share, i) => expect(fitted[i].toFixed(1)).toBe(share.toFixed(1)));
+    expect(fitted[6] + fitted[7]).toBeCloseTo(0.3, 9);
+    expect(fitted[7]).toBeGreaterThan(0);
     expect(fitted[7]).toBeLessThan(0.1);
   });
 
-  it('gives back the Season 12 tier shares through the middle of the ladder', () => {
-    // Bronze to Diamond. Its top tiers hold more players than any bell curve allows, so they are not held to this.
-    const PUBLISHED = [4.7, 20.2, 36.7, 26.9, 9.4];
+  it('gives back the Season 12 tier shares, top tiers included', () => {
+    // Bronze first, from the published cut-offs: top 95.4%, 75.2%, 38.53%, 11.6%, 2.21%, 0.28% and 0.01%.
+    // A bell curve could not hold this many players in the top tiers; this curve does not have to be one.
+    const PUBLISHED = [4.6, 20.2, 36.67, 26.93, 9.39, 1.93, 0.27, 0.01];
     const fitted = sharesOf(buildSeasonModel(season12, ladderOf(season12)));
-    PUBLISHED.forEach((share, i) => expect(Math.abs(fitted[i] - share)).toBeLessThan(1.7));
+    PUBLISHED.forEach((share, i) => expect(fitted[i]).toBeCloseTo(share, 6));
+  });
+
+  it('keeps both of them close to a bell', () => {
+    for (const s of [season12, season17]) {
+      const curve = buildSeasonModel(s, ladderOf(s));
+      const bell = buildSeasonModel({ ...s, model: 'normal' }, ladderOf(s));
+      expect(Math.abs(curve.quantile(0.5) - bell.quantile(0.5))).toBeLessThan(60);
+      expect(curve.rmse).toBeLessThan(1e-9);
+    }
   });
 
   it('would be misread on the wrong ladder', () => {
@@ -245,6 +415,34 @@ describe('tryBuildSeasonModel', () => {
     const fit = tryBuildSeasonModel({ datapoints: [] }, ladder);
     expect(fit.model).toBeNull();
     expect(fit.error.message).toMatch(/at least two/);
+  });
+});
+
+describe('monotone curve', () => {
+  it('is a straight line through two points, and beyond them', () => {
+    const line = monotoneCurve([0, 10], [1, 3]);
+    expect(line.at(5)).toBeCloseTo(2);
+    expect(line.at(-10)).toBeCloseTo(-1);
+    expect(line.at(20)).toBeCloseTo(5);
+    expect(line.slopeAt(7)).toBeCloseTo(0.2);
+  });
+
+  it('passes through its points and never turns back between them', () => {
+    const xs = [0, 1, 2, 4, 5, 9];
+    const ys = [0, 0.1, 3, 3.2, 8, 8.1];
+    const curve = monotoneCurve(xs, ys);
+    xs.forEach((x, i) => expect(curve.at(x)).toBeCloseTo(ys[i], 9));
+    for (let x = 0; x < 9; x += 0.05) {
+      expect(curve.at(x + 0.05)).toBeGreaterThanOrEqual(curve.at(x));
+      expect(curve.slopeAt(x)).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it('reports the slope of the curve it draws', () => {
+    const curve = monotoneCurve([0, 2, 3, 7], [0, 1, 4, 5]);
+    for (const x of [0.5, 2.5, 4, 6.9]) {
+      expect(curve.slopeAt(x)).toBeCloseTo((curve.at(x + 1e-5) - curve.at(x - 1e-5)) / 2e-5, 4);
+    }
   });
 });
 

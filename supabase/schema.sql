@@ -21,6 +21,7 @@ create table if not exists public.seasons (
   year        int  not null,
   number      int  not null,
   name        text not null check (char_length(name) between 1 and 60),
+  -- Which curve is fitted to the season's datapoints: an id from src/lib/model/buildSeasonModel.js.
   model       text not null default 'normal',
   -- Which ladder the season was played on: an id from src/data/ladder.js.
   ladder      text not null default 'emerald',
@@ -34,6 +35,8 @@ create table if not exists public.submissions (
   id           uuid primary key default gen_random_uuid(),
   season_id    text not null references public.seasons (id) on delete cascade,
   rank         text not null check (rank ~ '^[A-Za-z]{3,20} [1-5]$'),
+  -- The exact SR within that rank, from the rank progress on the screenshot. Null if only the rank is known.
+  sr           int check (sr between 0 and 5000),
   better_than  numeric not null check (better_than > 0 and better_than < 100),
   -- File name of the proof screenshot in the private "proofs" storage bucket.
   proof_path   text not null check (proof_path ~ '^[0-9a-f-]{36}[.](webp|jpg)$'),
@@ -41,6 +44,9 @@ create table if not exists public.submissions (
   created_at   timestamptz not null default now(),
   reviewed_at  timestamptz
 );
+
+-- For a database made before submissions carried an exact SR.
+alter table public.submissions add column if not exists sr int check (sr between 0 and 5000);
 
 -- A datapoint says: a player at this rank (or exact SR) is better than X% of players.
 create table if not exists public.datapoints (
@@ -103,8 +109,15 @@ begin
     raise exception 'That submission was already reviewed.';
   end if;
 
-  insert into public.datapoints (season_id, rank, better_than, weight, note, submission_id)
-  values (pending.season_id, pending.rank, pending.better_than, point_weight, 'Community submission', pending.id);
+  -- A submission with an exact SR becomes a datapoint at that SR; otherwise at the start of its rank.
+  if pending.sr is not null then
+    insert into public.datapoints (season_id, sr, better_than, weight, note, submission_id)
+    values (pending.season_id, pending.sr, pending.better_than, point_weight,
+            'Community submission (' || pending.rank || ')', pending.id);
+  else
+    insert into public.datapoints (season_id, rank, better_than, weight, note, submission_id)
+    values (pending.season_id, pending.rank, pending.better_than, point_weight, 'Community submission', pending.id);
+  end if;
 
   update public.submissions
   set status = 'approved', reviewed_at = now()
@@ -144,8 +157,8 @@ revoke all on public.seasons, public.datapoints, public.submissions, public.admi
 grant select on public.seasons, public.datapoints to anon, authenticated;
 grant insert, update, delete on public.seasons, public.datapoints to authenticated;
 
--- Visitors may only set these four columns; status always starts as 'pending'.
-grant insert (season_id, rank, better_than, proof_path) on public.submissions to anon, authenticated;
+-- Visitors may only set these five columns; status always starts as 'pending'.
+grant insert (season_id, rank, sr, better_than, proof_path) on public.submissions to anon, authenticated;
 grant select, update, delete on public.submissions to authenticated;
 
 grant execute on function public.is_admin() to anon, authenticated;

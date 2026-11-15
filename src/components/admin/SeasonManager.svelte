@@ -1,26 +1,37 @@
 <!-- Add, rename and delete seasons. A season's datapoints are managed on the Datapoints tab. -->
 <script>
   import ConfirmButton from '@/components/ConfirmButton.svelte';
+  import Select from '@/components/Select.svelte';
   import { runAdminAction } from '@/lib/admin.js';
   import { backend } from '@/lib/backend/index.js';
   import { DEFAULT_LADDER, LADDER_CHOICES } from '@/lib/ladder/ladders.js';
+  import { DEFAULT_MODEL, MODEL_CHOICES } from '@/lib/model/buildSeasonModel.js';
   import { app } from '@/lib/state/app.svelte.js';
   import { toasts } from '@/lib/state/toasts.svelte.js';
 
   const thisYear = new Date().getFullYear();
-  const blank = () => ({ name: '', year: thisYear, number: null, ladder: DEFAULT_LADDER });
+  const blank = () => ({ name: '', year: thisYear, number: null, ladder: DEFAULT_LADDER, model: DEFAULT_MODEL });
+
+  /** The ladders and curves on offer, as dropdown options. */
+  const LADDERS = LADDER_CHOICES.map(({ id, label }) => ({ value: id, label }));
+  const MODELS = MODEL_CHOICES.map(({ id, label }) => ({ value: id, label }));
+
+  /** What the curve choices do, shown when one is hovered. */
+  const MODEL_HINT =
+    'Bell curve: the bell closest to the datapoints, for a few community figures. Follows the data: passes through every datapoint, for a season whose whole distribution is known.';
 
   /** Edits in progress, by season id. */
   let drafts = $state({});
   let adding = $state(blank());
   let busyId = $state(null);
 
-  /** The fields that can be edited here, as stored. A season with no ladder of its own is on the default one. */
+  /** The fields that can be edited here, as stored. A season with no ladder or model of its own uses the default one. */
   const fieldsOf = (season) => ({
     name: season.name,
     year: season.year,
     number: season.number,
     ladder: season.ladder ?? DEFAULT_LADDER,
+    model: season.model ?? DEFAULT_MODEL,
   });
   const draftFor = (season) => drafts[season.id] ?? fieldsOf(season);
   const isDirty = (season) => {
@@ -75,6 +86,7 @@
     <span>Number</span>
     <span>Ladder</span>
     <span>Curve</span>
+    <span>Fit</span>
     <span></span>
   </div>
 
@@ -86,11 +98,9 @@
       <input class="input compact" type="number" aria-label="Year" value={draft.year} oninput={(e) => change(season, 'year', e.currentTarget.valueAsNumber)} />
       <input class="input compact" type="number" aria-label="Season number" value={draft.number} oninput={(e) => change(season, 'number', e.currentTarget.valueAsNumber)} />
       <!-- Which ladder the season was played on: its ranks are read on that ladder. -->
-      <select class="input compact" aria-label="Ladder" value={draft.ladder} onchange={(e) => change(season, 'ladder', e.currentTarget.value)}>
-        {#each LADDER_CHOICES as choice (choice.id)}
-          <option value={choice.id}>{choice.label}</option>
-        {/each}
-      </select>
+      <Select compact label="Ladder" value={draft.ladder} options={LADDERS} onchange={(value) => change(season, 'ladder', value)} />
+      <!-- Which curve is fitted to the season's datapoints. -->
+      <Select compact label="Curve" title={MODEL_HINT} value={draft.model} options={MODELS} onchange={(value) => change(season, 'model', value)} />
       <span>
         <span class="chip {fit.model ? 'good' : 'bad'}" title={fit.error?.message}>
           {season.datapoints.length} datapoint{season.datapoints.length === 1 ? '' : 's'} · {fit.model ? 'fits' : 'no curve'}
@@ -113,11 +123,8 @@
     <input class="input compact" aria-label="New season name" placeholder="2026: Season 6" bind:value={adding.name} />
     <input class="input compact" type="number" aria-label="New season year" bind:value={adding.year} />
     <input class="input compact" type="number" aria-label="New season number" placeholder="6" bind:value={adding.number} />
-    <select class="input compact" aria-label="New season ladder" bind:value={adding.ladder}>
-      {#each LADDER_CHOICES as choice (choice.id)}
-        <option value={choice.id}>{choice.label}</option>
-      {/each}
-    </select>
+    <Select compact label="New season ladder" bind:value={adding.ladder} options={LADDERS} />
+    <Select compact label="New season curve" title={MODEL_HINT} bind:value={adding.model} options={MODELS} />
     <span class="hint">Starts empty; add at least two datapoints.</span>
     <span class="actions">
       <button type="submit" class="btn small primary" disabled={busyId === 'new'}>Add season</button>
@@ -127,7 +134,7 @@
 
 <style>
   .table {
-    --columns: minmax(150px, 2fr) 84px 84px 190px minmax(170px, 1.4fr) 220px;
+    --columns: minmax(140px, 2fr) 76px 68px 180px 150px minmax(170px, 1.4fr) 200px;
   }
 
   .head,

@@ -1,6 +1,6 @@
 /**
  * Static figures for the article pages, drawn at build time from the fitted
- * season model: an SVG bell curve coloured by tier, and tier share bars.
+ * season model: the season's curve as an SVG coloured by tier, and tier share bars.
  * No JavaScript is needed to view them.
  */
 import { esc } from './html.js';
@@ -14,7 +14,7 @@ const PAD = { left: 16, right: 16, top: 34, bottom: 58 };
  * @param {object} d site data (scripts/site/data.js)
  * @param {{ markers?: { sr: number, label: string }[], shade?: [number, number], caption: string, label: string }} options
  */
-export function bellCurve(d, { markers = [], shade, caption, label }) {
+export function seasonCurve(d, { markers = [], shade, caption, label }) {
   const { ladder, model } = d;
   const x = (sr) => PAD.left + ((W - PAD.left - PAD.right) * sr) / ladder.maxSr;
   let peak = 0;

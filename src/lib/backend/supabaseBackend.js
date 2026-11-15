@@ -47,6 +47,7 @@ export function createSupabaseBackend({ url, anonKey }) {
     id: row.id,
     seasonId: row.season_id,
     rank: row.rank,
+    sr: row.sr ?? null,
     betterThan: Number(row.better_than),
     proofPath: row.proof_path,
     status: row.status,
@@ -75,7 +76,7 @@ export function createSupabaseBackend({ url, anonKey }) {
       return rows.map(toSeason);
     },
 
-    async submitDatapoint({ seasonId, rank, betterThan, proof }) {
+    async submitDatapoint({ seasonId, rank, sr, betterThan, proof }) {
       const client = await getClient();
 
       // The screenshot goes to private storage first; the submission then points at it.
@@ -89,7 +90,7 @@ export function createSupabaseBackend({ url, anonKey }) {
       unwrap(
         await client
           .from('submissions')
-          .insert({ season_id: seasonId, rank, better_than: betterThan, proof_path: proofPath }),
+          .insert({ season_id: seasonId, rank, sr: sr ?? null, better_than: betterThan, proof_path: proofPath }),
       );
     },
 
@@ -175,7 +176,7 @@ export function createSupabaseBackend({ url, anonKey }) {
 
     async saveSeason(season, isNew) {
       const client = await getClient();
-      const row = { year: season.year, number: season.number, name: season.name, ladder: season.ladder };
+      const row = { year: season.year, number: season.number, name: season.name, ladder: season.ladder, model: season.model };
       const table = client.from('seasons');
       unwrap(await (isNew ? table.insert({ id: season.id, ...row }) : table.update(row).eq('id', season.id)));
     },

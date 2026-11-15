@@ -23,7 +23,7 @@ ${h.estimateNote()}
 <h2>What percent of players are Master?</h2>
 <p>About ${d.pct(t.share)} of players are in Master, the tier from ${t.range} SR on this site's scale. Master or higher, including Grandmaster and Champion, is ${d.pct(t.top)}. ${inMaster.length ? `This tier is also where the current season's datapoints are: ${inMaster.map((p) => `${p.label} was reported as better than ${d.pct(p.p)} of players`).join(', and ')}. So Master figures are among the best-supported numbers on the site.` : ''}</p>
 
-${h.bell({
+${h.curve({
   label: 'Overwatch rank distribution with the Master tier highlighted.',
   caption: `Master on the ${d.season.name} curve, with the top 5% and top 1% lines.`,
   markers: [

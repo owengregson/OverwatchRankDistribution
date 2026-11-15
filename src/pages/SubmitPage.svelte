@@ -2,32 +2,70 @@
   Public form: tell us what share of players a rank beats this season.
   Submissions are stored as "pending" and only affect the curve once an
   admin approves them.
+
+  The form starts with the screenshot. The rest (rank, division, rank
+  progress, percentage) stays greyed out until there is one, and is filled
+  in from it where it can be read: the screenshot is looked at on the
+  visitor's own computer (see lib/screenshot), so nothing is sent anywhere
+  until they submit.
 -->
 <script>
+  import { onDestroy } from 'svelte';
   import ImageDrop from '@/components/ImageDrop.svelte';
   import RankBadge from '@/components/RankBadge.svelte';
   import RankPicker from '@/components/RankPicker.svelte';
+  import Select from '@/components/Select.svelte';
+  import Slider from '@/components/Slider.svelte';
   import { backend } from '@/lib/backend/index.js';
-  import { pop, slide } from '@/lib/motion.js';
+  import { formatSr } from '@/lib/format.js';
+  import { dissolve, pop, slide } from '@/lib/motion.js';
   import { href } from '@/lib/router.svelte.js';
+  import { srAt } from '@/lib/screenshot/parse.js';
   import { app } from '@/lib/state/app.svelte.js';
 
   const STEPS = [
-    { title: 'Submit', text: 'Pick the rank, enter the percentage the game shows, and attach a screenshot.' },
+    { title: 'Submit', text: 'Add a screenshot of your rank screen. The rank and percentages are read from it for you to check.' },
     { title: 'Review', text: 'Every submission is checked against its screenshot before it counts.' },
     { title: 'Refit', text: 'Once approved, the curve is refitted with your datapoint included.' },
   ];
 
   /** The tier the form starts on, and falls back to if the chosen season's ladder lacks the one picked. */
   const STARTING_TIER = 'gold';
+  /** Rank progress before anything is known: the middle of the division. */
+  const STARTING_PROGRESS = 50;
+  /** How long (ms) the screenshot reader gets before the visitor is left to fill the form in by hand. */
+  const READ_TIMEOUT = 30000;
+  /** What each thing read from a screenshot is called in the note under it. */
+  const READ_NAMES = { rank: 'the rank', progress: 'the rank progress', betterThan: 'the percentage' };
+  /** What is written beside a detail that still needs the visitor. */
+  const FLAG_TEXT = { missing: 'Not read · fill this in', unsure: 'Hard to read · check this' };
 
   let seasonId = $state(app.seasonId);
   let tierId = $state(STARTING_TIER);
   let number = $state(3);
+  /** How far through the division, 0 to 100: the game's "Rank progress". */
+  let progress = $state(STARTING_PROGRESS);
   /** Number inputs bind to a number, or nothing when empty. */
   let betterThan = $state(null);
   /** The prepared screenshot (see ImageDrop), or null. */
   let proof = $state(null);
+
+  /** True while ImageDrop is preparing a newly chosen image. */
+  let preparing = $state(false);
+  /** Reading the screenshot: 'none' with no image, 'reading' while it is looked at, 'done' after. */
+  let reading = $state('none');
+  /** After a reading: the details filled in from it, those it could not find, and those it was unsure of. */
+  let read = $state({ found: [], missing: [], unsure: [] });
+  /**
+   * The details that still need the visitor after a reading, by field:
+   * 'missing' for one the screenshot did not give up, 'unsure' for one that
+   * was hard to make out. Each is marked on the form until it is touched.
+   */
+  let flags = $state({});
+  /** Counts readings, so one that finishes after its image was replaced or removed is ignored. */
+  let readRun = 0;
+  /** Shuts the reader down; set once it has been loaded. */
+  let stopReader = null;
 
   let errors = $state({});
   let sending = $state(false);
@@ -40,7 +78,101 @@
   const tiers = $derived(app.ladderOf(season).tiers);
   const tier = $derived(tiers.find((t) => t.id === tierId) ?? tiers.find((t) => t.id === STARTING_TIER));
   const rankName = $derived(`${tier.name} ${number}`);
+  const division = $derived(tier.divisions.find((d) => d.number === number) ?? tier.divisions[0]);
+  /** The exact SR the datapoint is for: the rank progress, measured along the division. */
+  const sr = $derived(srAt(division, progress));
   const hasPercent = $derived(typeof betterThan === 'number' && betterThan > 0 && betterThan < 100);
+  /** A screenshot has been chosen and is being prepared, then read. */
+  const processing = $derived(preparing || reading === 'reading');
+  /** The details cannot be touched until there is a screenshot and it has been read. */
+  const locked = $derived(!proof || processing);
+
+  /** "a", "a and b", "a, b and c" */
+  const listed = (names) => (names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names.join(''));
+  const named = (fields) => listed(fields.map((field) => READ_NAMES[field]));
+
+  /** What the note beside the screenshot says. */
+  const note = $derived.by(() => {
+    if (reading !== 'done') return 'Reading the rank, rank progress and percentage…';
+    const { found, missing, unsure } = read;
+    if (!found.length) return 'Could not read this screenshot. Fill in the details below.';
+    if (missing.length) return `Could not read ${named(missing)}. Fill ${missing.length > 1 ? 'them' : 'it'} in below.`;
+    if (unsure.length) return `Filled in below, but ${named(unsure)} ${unsure.length > 1 ? 'were' : 'was'} hard to make out.`;
+    return 'Filled in below. Check it matches before you send it.';
+  });
+
+  /** The label beside the screenshot's preview. */
+  const chip = $derived.by(() => {
+    if (reading === 'reading') return { text: 'Reading…', tone: '' };
+    if (reading === 'done' && read.found.length && !read.missing.length && !read.unsure.length) {
+      return { text: 'Details read', tone: 'good' };
+    }
+    if (reading === 'done') return { text: 'Check the details', tone: 'warn' };
+    return { text: 'Ready to send', tone: 'good' };
+  });
+
+  /**
+   * A screenshot was added, replaced or removed. A new one is read, and the
+   * details it shows are filled in before the form is unlocked.
+   */
+  async function onimage(file) {
+    errors.proof = '';
+    const run = ++readRun;
+    flags = {};
+    if (!file) {
+      reading = 'none';
+      return;
+    }
+
+    reading = 'reading';
+    let result = null;
+    try {
+      // The reader is large, so it is only loaded once there is something to read.
+      const reader = await import('@/lib/screenshot/readRankScreen.js');
+      stopReader = reader.stopReading;
+      let timer;
+      const timeout = new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error('Reading the screenshot took too long.')), READ_TIMEOUT);
+      });
+      result = await Promise.race([reader.readRankScreen(file, app.ladderOf(season)), timeout]).finally(() => clearTimeout(timer));
+    } catch (error) {
+      // Not fatal: the details can always be filled in by hand. A reader that hung is shut down.
+      console.warn('Could not read the screenshot.', error);
+      stopReader?.();
+    }
+    if (run !== readRun) return;
+
+    const found = [];
+    if (result?.tier && result.number) {
+      tierId = result.tier.id;
+      number = result.number;
+      found.push('rank');
+    }
+    if (typeof result?.progress === 'number') {
+      progress = result.progress;
+      found.push('progress');
+    }
+    if (typeof result?.betterThan === 'number') {
+      betterThan = result.betterThan;
+      errors.betterThan = '';
+      found.push('betterThan');
+    }
+    read = {
+      found,
+      missing: Object.keys(READ_NAMES).filter((field) => !found.includes(field)),
+      unsure: (result?.unsure ?? []).filter((field) => found.includes(field)),
+    };
+    flags = Object.fromEntries([
+      ...read.missing.map((field) => [field, 'missing']),
+      ...read.unsure.map((field) => [field, 'unsure']),
+    ]);
+    reading = 'done';
+  }
+
+  /** The visitor has dealt with a detail: it no longer needs marking. */
+  const settled = (field) => delete flags[field];
+
+  onDestroy(() => stopReader?.());
 
   function validate() {
     const found = {};
@@ -63,7 +195,7 @@
 
     sending = true;
     try {
-      await backend.submitDatapoint({ seasonId: season.id, rank: rankName, betterThan, proof });
+      await backend.submitDatapoint({ seasonId: season.id, rank: rankName, sr, betterThan, proof });
       sent = true;
     } catch (error) {
       failure = error.message;
@@ -73,7 +205,11 @@
   }
 
   function another() {
+    readRun += 1;
+    reading = 'none';
+    flags = {};
     betterThan = null;
+    progress = STARTING_PROGRESS;
     proof = null;
     errors = {};
     sent = false;
@@ -106,54 +242,107 @@
       </div>
     {:else}
       <p class="lede">
-        Know what share of players a rank beats this season? Send it in with a screenshot as proof. Each datapoint makes the curve
-        more accurate for everyone.
+        Know what share of players your rank beats? Send in a screenshot of the rank screen that shows it. Each datapoint makes
+        the curve more accurate.
       </p>
 
       <form bind:this={form} onsubmit={submit} novalidate>
-        {#if app.seasons.length > 1}
-          <label class="field">
-            <span class="label">Season</span>
-            <select class="input" bind:value={seasonId}>
-              {#each app.seasons as option (option.id)}
-                <option value={option.id}>{option.name}</option>
-              {/each}
-            </select>
-          </label>
-        {/if}
-
-        <div class="field">
-          <span class="label">Rank</span>
-          <RankPicker {tier} {number} {tiers} iconSize={42} onpick={(t, n) => ((tierId = t.id), (number = n))} />
-        </div>
-
-        <label class="field">
-          <span class="label">Better than</span>
-          <span class="percent">
-            <input
-              class="input"
-              type="number"
-              inputmode="decimal"
-              min="0"
-              max="100"
-              step="0.01"
-              placeholder="e.g. 97"
-              bind:value={betterThan}
-              oninput={() => (errors.betterThan = '')}
-              aria-invalid={Boolean(errors.betterThan)}
-            />
-            <span class="unit">% of players</span>
-          </span>
-          <span class="hint" class:error={errors.betterThan}>
-            {errors.betterThan || `The share of players a ${rankName} player ranks above.`}
-          </span>
-        </label>
-
         <div class="field">
           <span class="label">Screenshot</span>
-          <ImageDrop bind:value={proof} invalid={Boolean(errors.proof)} onchange={() => (errors.proof = '')} />
+          <ImageDrop
+            bind:value={proof}
+            bind:busy={preparing}
+            invalid={Boolean(errors.proof)}
+            {chip}
+            {note}
+            fine="PNG, JPEG or WebP of your rank screen. It is read on your device to fill in the form below."
+            onchange={onimage}
+          />
           {#if errors.proof}
             <span class="hint error">{errors.proof}</span>
+          {/if}
+        </div>
+
+        {#if app.seasons.length > 1}
+          <div class="field inline">
+            <span class="label">Season</span>
+            <Select bind:value={seasonId} label="Season" options={app.seasons.map((s) => ({ value: s.id, label: s.name }))} />
+          </div>
+        {/if}
+
+        <!-- Greyed out and out of reach until a screenshot has been added and read; covered while it is being read. -->
+        <div class="details-area">
+        <div class="details" class:locked inert={locked}>
+          <!-- A detail the screenshot did not give up, or gave up unclearly, is marked until the visitor touches it. -->
+          <div class="field" class:flagged={flags.rank}>
+            <span class="label">
+              Rank and division
+              {#if flags.rank}<span class="chip warn" in:pop>{FLAG_TEXT[flags.rank]}</span>{/if}
+            </span>
+            <RankPicker
+              {tier}
+              {number}
+              {tiers}
+              iconSize={42}
+              onpick={(t, n) => {
+                tierId = t.id;
+                number = n;
+                settled('rank');
+              }}
+            />
+          </div>
+
+          <div class="field" class:flagged={flags.progress}>
+            <!-- The "Rank progress" figure on the screen: how far through the division, which gives the exact SR. -->
+            <span class="label split">
+              <span class="named">
+                Rank progress
+                {#if flags.progress}<span class="chip warn" in:pop>{FLAG_TEXT[flags.progress]}</span>{/if}
+              </span>
+              <span class="numeric">{rankName} at {progress}% is {formatSr(sr)} SR</span>
+            </span>
+            <Slider bind:value={progress} label="Rank progress, percent" oninput={() => settled('progress')} />
+          </div>
+
+          <label class="field" class:flagged={flags.betterThan}>
+            <span class="label">
+              Better than
+              {#if flags.betterThan}<span class="chip warn" in:pop>{FLAG_TEXT[flags.betterThan]}</span>{/if}
+            </span>
+            <span class="percent">
+              <input
+                class="input"
+                type="number"
+                inputmode="decimal"
+                min="0"
+                max="100"
+                step="0.01"
+                placeholder="e.g. 97"
+                bind:value={betterThan}
+                oninput={() => {
+                  errors.betterThan = '';
+                  settled('betterThan');
+                }}
+                aria-invalid={Boolean(errors.betterThan)}
+              />
+              <span class="unit">% of players</span>
+            </span>
+            <span class="hint" class:error={errors.betterThan}>
+              {errors.betterThan ||
+                (flags.betterThan === 'missing'
+                  ? 'Could not read it. Enter the "Higher ranked than" figure from the screen.'
+                  : 'The "Higher ranked than" figure on the screen.')}
+            </span>
+          </label>
+        </div>
+
+          {#if processing}
+            <div class="reading" role="status" transition:dissolve>
+              <span class="scan" aria-hidden="true"></span>
+              <span class="display slanted">Reading your screenshot</span>
+              <span class="progress" aria-hidden="true"><i></i></span>
+              <span class="eyebrow">On your device · nothing is sent yet</span>
+            </div>
           {/if}
         </div>
 
@@ -186,7 +375,7 @@
             {/key}
             of players
           </p>
-          <p class="eyebrow">{season.name}</p>
+          <p class="eyebrow">{season.name} · {formatSr(sr)} SR</p>
         </div>
       </div>
     </section>
@@ -250,8 +439,183 @@
 
   form {
     display: grid;
-    gap: 18px;
-    margin-top: 6px;
+    gap: 14px;
+    margin-top: 4px;
+  }
+
+  /* A field with its label and control side by side. */
+  .field.inline {
+    grid-template-columns: auto minmax(0, 320px);
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  /* A label with a figure at the far end of its line. */
+  .label.split {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .label.split .numeric {
+    letter-spacing: 0.06em;
+    color: var(--ice-400);
+  }
+
+  .details-area {
+    position: relative;
+  }
+
+  .details {
+    display: grid;
+    gap: 14px;
+    transition: opacity 240ms;
+  }
+
+  /* Each label line is tall enough for a flag beside it, so nothing moves when one appears. */
+  .details .label,
+  .details .named {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 18px;
+  }
+
+  /*
+   * A detail that still needs the visitor: an orange frame around the whole
+   * field. The frame is drawn outside the field and takes no room, and lets
+   * clicks through to the controls under it.
+   */
+  .field.flagged {
+    position: relative;
+  }
+
+  .field.flagged::after {
+    content: '';
+    position: absolute;
+    inset: -7px -9px;
+    border: 1px solid var(--orange-hot);
+    border-left-width: 3px;
+    background: rgb(240 100 20 / 0.07);
+    pointer-events: none;
+    animation: flag 1400ms var(--ease-out);
+  }
+
+  /* It arrives with a pulse, to catch the eye once. */
+  @keyframes flag {
+    0% {
+      opacity: 0;
+      box-shadow: 0 0 0 0 rgb(255 131 54 / 0.7);
+    }
+    25% {
+      opacity: 1;
+      box-shadow: 0 0 0 0 rgb(255 131 54 / 0.7);
+    }
+    100% {
+      box-shadow: 0 0 0 12px rgb(255 131 54 / 0);
+    }
+  }
+
+  .field.flagged .percent .input {
+    border-color: var(--orange-hot);
+  }
+
+  /* Laid over the greyed-out details while the screenshot is prepared and read. */
+  .reading {
+    --cursor: default;
+    cursor: default;
+    position: absolute;
+    inset: -8px;
+    z-index: 1;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 10px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    background: rgb(8 14 36 / 0.62);
+    backdrop-filter: blur(3px);
+    text-align: center;
+    user-select: none;
+  }
+
+  .reading .display {
+    font-size: 30px;
+    font-style: italic;
+    color: var(--ice-50);
+  }
+
+  .reading .eyebrow {
+    font-size: 10px;
+  }
+
+  /* A band of light that sweeps down the area, as if scanning it. */
+  .scan {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 42%;
+    background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--tier) 16%, transparent) 85%, var(--tier));
+    border-bottom: 1px solid var(--tier);
+    opacity: 0.55;
+    animation: scan 1500ms var(--ease-in-out) infinite;
+  }
+
+  @keyframes scan {
+    from {
+      translate: 0 -100%;
+    }
+    to {
+      translate: 0 240%;
+    }
+  }
+
+  /* A slanted bar with a block that runs along it for as long as the reading takes. */
+  .progress {
+    position: relative;
+    width: min(240px, 70%);
+    height: 6px;
+    overflow: hidden;
+    border: 1px solid var(--line-strong);
+    background: rgb(5 10 26 / 0.6);
+    transform: skewX(-18deg);
+  }
+
+  .progress i {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 38%;
+    background: var(--tier);
+    box-shadow: 0 0 12px var(--tier);
+    animation: run 1100ms var(--ease-in-out) infinite;
+  }
+
+  @keyframes run {
+    from {
+      translate: -110% 0;
+    }
+    to {
+      translate: 290% 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .scan {
+      animation: none;
+      opacity: 0;
+    }
+
+    .progress i {
+      animation-duration: 2600ms;
+    }
+  }
+
+  /* Waiting for a screenshot: dimmed, and nothing in it can be selected or shows a hand. */
+  .details.locked {
+    --cursor: default;
+    cursor: default;
+    opacity: 0.65;
+    user-select: none;
   }
 
   .percent {
@@ -266,7 +630,7 @@
     font-family: var(--font-display);
     font-weight: 400;
     font-size: 26px;
-    min-height: 46px;
+    min-height: 42px;
   }
 
   .unit {

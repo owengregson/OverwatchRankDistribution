@@ -2,7 +2,7 @@
  * Building blocks the article bodies use: links, tables and figures that
  * read their numbers from the site data, and the standard estimate note.
  */
-import { bellCurve, shareBars } from './charts.js';
+import { seasonCurve, shareBars } from './charts.js';
 import { esc } from './html.js';
 
 /**
@@ -87,7 +87,8 @@ ${fractions
   </tbody>
 </table></div>`,
 
-    bell: (options) => bellCurve(d, options),
+    /** The season's curve, filled tier by tier. */
+    curve: (options) => seasonCurve(d, options),
     bars: (items, options) => shareBars(d, items, options),
     tierBars: (options) => shareBars(d, d.tiers, options),
   };

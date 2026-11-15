@@ -22,19 +22,25 @@ With no database configured, `npm run dev` uses a stand-in backend that keeps ev
 
 ## How the curve is made
 
-1. A season is a list of datapoints: a rank (or an exact SR) and the percentage of players it is better than.
-2. A bell curve is a straight line once percentages are converted to z-scores, so the fit is a weighted least-squares line through the datapoints. Two datapoints give an exact fit; more give the best fit.
-3. SR is limited to 0–5000, so the curve is renormalised over that range.
+A season is a list of datapoints: a rank (or an exact SR) and the percentage of players it is better than. Its `model` field says which curve is made from them. Both work on the percentages converted to z-scores, where a bell curve is a straight line.
 
-The code is in `src/lib/model`. `buildSeasonModel(season, ladder)` returns `cdf`, `pdf` and `quantile` functions, and everything on screen is derived from those. To support another curve shape, write a fitter with the same return shape as `fitNormal.js` and register it in `buildSeasonModel.js`; a season picks it with its `model` field.
+- **`normal`, the bell curve** (the default). The fit is a weighted least-squares line through the datapoints: two give an exact fit, more give the best fit. SR is limited to 0–5000, so the curve is cut off and renormalised over that range. Use it for community datapoints, which are few, close together and a little noisy.
+- **`freeform`, following the data.** A smooth, always-rising curve through every datapoint, so the result has whatever shape the data has and is bell-shaped in between; past the outermost datapoints it carries straight on, like a bell's tails. Use it for a season whose whole distribution is known, with a datapoint at each tier or division boundary. Three things to know:
+  - Players the curve puts below 0 SR are counted in the lowest division, and likewise at the top. That is how Bronze 5 comes to hold more players than Bronze 4, which no bell curve can show.
+  - It reproduces its source, roughness included: figures rounded to one decimal place give a curve with small bumps where the rounding falls. Bronze divisions are wider than the rest on the SR scale, so a season with datapoints inside Bronze has fewer players per SR there and the curve climbs quickly across the Bronze boundary.
+  - Weights only settle disagreements: datapoints at the same SR are averaged by weight, and two that contradict each other (a higher rank, a lower percentage) are averaged into one point between them.
+
+The code is in `src/lib/model`. `buildSeasonModel(season, ladder)` returns `cdf`, `pdf` and `quantile` functions, plus the curve's `mean` and `sd`, and everything on screen is derived from those; nothing outside the fitters knows which curve a season uses. To add another, write a fitter with the same return shape as `fitNormal.js` and register it in `buildSeasonModel.js`.
+
+A published breakdown is turned into datapoints by adding up its shares from the bottom, exactly as published: the datapoint for a rank is the total of everything below it (2026 Season 4 was made this way).
 
 ## Managing the data
 
 Day to day, use the admin panel at `/#/admin`:
 
-- **Review queue**: pending submissions, each shown next to what the current curve says for that rank, with the screenshot. Approve (optionally with a weight) or deny.
+- **Review queue**: pending submissions, each shown with its rank and exact SR next to what the current curve says there, with the screenshot. Approve (optionally with a weight) or deny.
 - **Datapoints**: every datapoint behind a season. Edit, add or delete, and see the fit update. "Rank or SR" accepts `Master 3` or `3700`.
-- **Seasons**: add, rename or delete seasons, and choose the ladder each was played on. A new season stays hidden from visitors until it has enough datapoints for a curve.
+- **Seasons**: add, rename or delete seasons, and choose the ladder each was played on and the curve fitted to it (bell curve, or following the data). A new season stays hidden from visitors until it has enough datapoints for a curve.
 
 `src/data/seasons/*.json` holds a bundled copy of each season. The site shows it for the instant before live data loads, or if the database cannot be reached. Format:
 
@@ -52,7 +58,23 @@ Day to day, use the admin panel at `/#/admin`:
 }
 ```
 
+While developing with the stand-in backend, the browser keeps its own copy of each season. Editing a season file replaces that copy the next time the page loads, along with any changes made to that season in the admin panel.
+
 A season played on an older ladder adds `"ladder": "classic"` (the ladder before Emerald existed). Its rank names are then read on that ladder, where "Silver 5" is 1500 SR and not 1000, and the chart shows that ladder's tiers. Without the field a season is on today's ladder. The ladders are defined in `src/data/ladder.js`.
+
+## Submissions and the screenshot reader
+
+The submit page (`/#/submit`) starts with a screenshot of the game's rank screen (the one shown after a match, with "Rank progress" and "Higher ranked than"). The rest of the form is greyed out until there is one. The screenshot is then read on the visitor's own computer and the form filled in from it:
+
+- **The rank**, e.g. "Champion 4".
+- **Rank progress**, how far through that division the player is. With the rank it gives an exact SR: Champion 4 at 59% is 4,659 SR. A submission carries that SR, and approving it makes a datapoint at that SR and not at the start of the rank.
+- **Higher ranked than**, the share of players the rank beats.
+
+The visitor checks the details, corrects anything misread, and sends it. Whatever could not be read is left for them to fill in.
+
+The reading is done by Tesseract, compiled to WebAssembly, in `src/lib/screenshot`: `ocr.js` runs the engine, `readRankScreen.js` looks at the screen (the whole of it first, then each line it found on its own, and each number once more with only digits allowed, keeping a number when the readings agree), and `parse.js` picks the three facts out of the text and is the part with tests. The engine and its English data are about 7 MB. They are served by this site, never fetched from another server, and only downloaded when a screenshot is added. `scripts/ocrData.js` is the small Vite plugin that puts the data file at a fixed address (`ocr/eng.traineddata.gz`).
+
+It reads the English game client. In another language the form is simply left to fill in by hand.
 
 ## Connecting the database (Supabase)
 
@@ -78,13 +100,14 @@ Never put the database password or the `service_role` key in this repository or 
 
 ```
 assets/                    icons, fonts and cursors
-scripts/                   measure-icons (icon sizes), extract-cursors (.cur → PNG)
+scripts/                   measure-icons (icon sizes), extract-cursors (.cur → PNG), ocrData (the screenshot reader's data file)
 supabase/schema.sql        database tables and security rules
 src/
   config.js                database connection, author link
   data/ladder.js           the ladders: each one's tiers and SR ranges, plus tier colours, icons, light effects
   data/seasons/            bundled seasons
   lib/model/               datapoints → fitted curve → readings
+  lib/screenshot/          reads the rank, rank progress and percentage off a screenshot, in the browser
   lib/ladder/              tiers and divisions, rank-name parsing
   lib/backend/             storage: Supabase, local stand-in, read-only
   lib/state/               app state (season, model, cursor, pins), the opening sequence
@@ -102,6 +125,7 @@ Common changes:
 - **Ladder** (a new tier, different SR ranges, colours): `src/data/ladder.js`. It holds every ladder the game has had (`LADDERS`); each season names the one it was played on. When the ladder changes again, add a new entry there and make it `DEFAULT_LADDER`, leaving the old one for the seasons that used it. A database-backed season stores its ladder in the `ladder` column (`supabase/schema.sql`).
 - **Rank icons**: replace or add an image in `assets/images`, then run `node scripts/measure-icons.mjs`. The icon files differ in shape and scale, so the site measures how much each one actually covers and scales them to look the same size (`src/lib/ladder/iconSizing.js`).
 - **Rank light effects** (glow, streak, rays, sparkles): the `EFFECTS` table and the `RAY` and `STREAK_OPACITY` settings at the top of `src/components/RankAura.svelte`; which tier uses which is `glow` in the ladder.
+- **Dropdowns and sliders**: `src/components/Select.svelte` and `Slider.svelte` are the site's own, used in place of the browser's `<select>` and range input. The browser draws a `<select>`'s list outside the page, where it cannot be styled and the system cursor shows.
 - **Cursors**: the site draws its own cursor (`src/components/CustomCursor.svelte`), because Chrome swaps any image cursor for the system one wherever it would cross the edge of the page. Size is `CURSOR_SCALE` in `src/lib/cursor/cursors.js`; which elements get the arrow, finger or text bar is `src/styles/cursors.css`. After replacing a `.cur`, run `node scripts/extract-cursors.mjs`.
 - **The curve's look**: the curve is painted on a canvas by `src/lib/chart/curveRenderer.js`. Everything worth tuning (how bright the fill, glow and core line are, the hatching, the light around the cursor, the passing sheen) is the `LOOK` table at the top of that file. Its colours come from the ladder: `src/lib/chart/tierRamp.js` blends each tier's colour into its neighbours.
 - **Loading screen and opening**: the markup is in `index.html` so it shows before any script runs, the styles are `src/styles/loader.css`, and `src/lib/loader.js` loads the fonts, images and season data, fills the bar and opens the page (timings are in `TIMING` there). The page's own entrance waits for it: see `src/lib/state/intro.svelte.js`. The curve's part of the intro is `INTRO` in `src/components/DistributionChart.svelte`.

@@ -21,7 +21,7 @@ ${h.estimateNote()}
 <h2>What percent of players are Diamond?</h2>
 <p>About ${d.pct(t.share)} of players are in Diamond, which covers ${t.range} SR on this site's scale. The tier is busiest at the bottom: Diamond 5 alone holds ${d.pct(d5.share)} of players, while Diamond 1 holds ${d.pct(d1.share)}. That shape is what you would expect from a bell curve: Diamond sits on the downward slope past the peak, so each division up has fewer players than the one below.</p>
 
-${h.bell({
+${h.curve({
   label: 'Overwatch rank distribution with the Diamond tier highlighted.',
   caption: `Diamond on the ${d.season.name} curve. Everything to the right of Diamond 5 is about ${d.roughPct(t.top)} of players.`,
   markers: [{ sr: t.minSr, label: `Diamond 5: top ${d.pct(t.top)}` }],

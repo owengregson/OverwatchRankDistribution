@@ -15,6 +15,10 @@ export default {
     const steepest = [...d.divisions].sort((a, b) => b.share - a.share)[0];
     const master3 = d.divisions.find((x) => x.name === 'Master 3');
     const plat5 = d.tier('platinum').divisionList[0];
+    // The curve's mean and spread, measured from the curve itself, and the SR one spread either side of the mean.
+    const { mean, sd } = d.model;
+    const low = Math.max(d.ladder.minSr, mean - sd);
+    const high = Math.min(d.ladder.maxSr, mean + sd);
     return `
 <p>Every Overwatch rank covers a band of skill rating, or SR. This page lists the SR range for each tier and each division on the scale this site uses, and pairs each threshold with the estimated share of players below it. If you know roughly where you sit, ${h.chart('the interactive SR distribution chart')} will read out the rank, percentile and distance to the next division at any SR.</p>
 
@@ -33,14 +37,14 @@ export default {
 ${h.tierTable({ caption: 'SR range and estimated percentile for each tier' })}
 
 <h2>The Overwatch SR distribution</h2>
-<p>Players are not spread evenly over SR. The estimated distribution for ${d.season.name} is a bell curve centred on about ${d.sr(d.model.params.mean)} SR with a spread (standard deviation) of about ${d.sr(d.model.params.sd)} SR. In plain terms, about ${d.roughPct(d.model.cdf(d.model.params.mean + d.model.params.sd) - d.model.cdf(d.model.params.mean - d.model.params.sd))} of players fall between ${d.sr(d.model.params.mean - d.model.params.sd)} and ${d.sr(d.model.params.mean + d.model.params.sd)} SR, which is ${d.ladder.divisionAt(d.model.params.mean - d.model.params.sd).name} to ${d.ladder.divisionAt(d.model.params.mean + d.model.params.sd).name}.</p>
+<p>Players are not spread evenly over SR. The estimated distribution for ${d.season.name} is ${d.isBellFit ? 'a bell curve' : 'a bell-shaped curve'} centred on about ${d.sr(mean)} SR with a spread (standard deviation) of about ${d.sr(sd)} SR. In plain terms, about ${d.roughPct(d.model.cdf(high) - d.model.cdf(low))} of players fall between ${d.sr(low)} and ${d.sr(high)} SR, which is ${d.ladder.divisionAt(low).name} to ${d.ladder.divisionAt(high).name}.</p>
 
-${h.bell({
+${h.curve({
   label: `Estimated SR distribution of Overwatch players, ${d.season.name}, from 0 to ${d.sr(d.ladder.maxSr)} SR.`,
   caption: `Estimated SR distribution, ${d.season.name}. Each colour is one tier; the dashed lines mark one standard deviation either side of the mean.`,
   markers: [
-    { sr: d.model.params.mean - d.model.params.sd, label: `−1 SD: ${d.sr(d.model.params.mean - d.model.params.sd)}` },
-    { sr: d.model.params.mean + d.model.params.sd, label: `+1 SD: ${d.sr(d.model.params.mean + d.model.params.sd)}` },
+    { sr: low, label: `−1 SD: ${d.sr(low)}` },
+    { sr: high, label: `+1 SD: ${d.sr(high)}` },
   ],
 })}
 

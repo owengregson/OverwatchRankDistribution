@@ -85,6 +85,8 @@ export function loadSiteData() {
     seasons,
     season,
     model,
+    /** Whether the newest season's curve is a fitted bell, not one drawn through its datapoints. */
+    isBellFit: model.type === 'normal',
     tiers,
     tier,
     divisions,

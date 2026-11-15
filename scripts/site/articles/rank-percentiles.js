@@ -41,7 +41,7 @@ ${h.estimateNote()}
 <h2>What rank is top 50%?</h2>
 <p>The halfway point, the median, is about ${d.sr(top50.sr)} SR in ${top50.division.name}. If you are above that, you are better than more than half of all competitive players. The ${h.a('average-rank', 'average rank page')} looks at the middle of the ladder in more detail.</p>
 
-${h.bell({
+${h.curve({
   label: `Overwatch rank distribution with the top 50%, 10% and 1% cut-offs marked.`,
   caption: `Where the top 50%, 10% and 1% lines fall on the ${d.season.name} curve.`,
   markers: [

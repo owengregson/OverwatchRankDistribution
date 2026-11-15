@@ -3,15 +3,34 @@
   the page, or browse for one. The chosen image is prepared for upload
   (see lib/image.js) and exposed through `value`:
   { blob, extension, width, height } or null.
+
+  `onchange(file)` fires with the file as it was chosen, before it was
+  shrunk (or null when the image is removed), for anything that wants to
+  look at the original. `chip` ({ text, tone }) replaces the "Ready to
+  send" label beside the preview, e.g. while the screenshot is being read,
+  and `note` is a line or two of text under it. `fine` is the small print
+  under the prompt. `busy` (bindable) is true while an image is prepared.
+
+  The box is the same size whether it is empty or holds an image: the
+  prompt stays in place, unseen, and the preview is laid over it. Nothing
+  around it moves when an image is added.
 -->
 <script>
   import { ACCEPTED_TYPES, formatBytes, prepareImage } from '@/lib/image.js';
   import { pop, slide } from '@/lib/motion.js';
 
-  let { value = $bindable(null), invalid = false, onchange } = $props();
+  let {
+    value = $bindable(null),
+    invalid = false,
+    chip = { text: 'Ready to send', tone: 'good' },
+    note = '',
+    fine = 'PNG, JPEG or WebP. It is shrunk and stripped of hidden details before it is sent.',
+    /** True while a chosen image is being prepared; bind it to show that elsewhere. */
+    busy = $bindable(false),
+    onchange,
+  } = $props();
 
   let over = $state(false);
-  let busy = $state(false);
   let problem = $state('');
   let previewUrl = $state('');
   /** dragenter and dragleave also fire for child elements; count them to know when the drag really left. */
@@ -34,7 +53,7 @@
     problem = '';
     try {
       value = await prepareImage(file);
-      onchange?.();
+      onchange?.(file);
     } catch (error) {
       problem = error.message;
     } finally {
@@ -74,7 +93,7 @@
   function remove() {
     value = null;
     problem = '';
-    onchange?.();
+    onchange?.(null);
   }
 </script>
 
@@ -92,24 +111,8 @@
   {ondragleave}
   ondragover={(event) => event.preventDefault()}
 >
-  {#if busy}
-    <p class="status">Preparing image…</p>
-  {:else if value}
-    <div class="chosen" in:pop={{ from: 0.92 }}>
-      <img src={previewUrl} alt="Your screenshot" draggable="false" />
-      <div class="about">
-        <span class="chip good">Ready to send</span>
-        <span class="numeric">{value.width} × {value.height} · {formatBytes(value.blob.size)}</span>
-        <span class="actions">
-          <label class="btn small">
-            Replace
-            <input type="file" accept={ACCEPTED_TYPES.join(',')} onchange={(e) => take(e.currentTarget.files[0])} />
-          </label>
-          <button type="button" class="btn small danger" onclick={remove}>Remove</button>
-        </span>
-      </div>
-    </div>
-  {:else}
+  <!-- Always here, so the box keeps this size; out of sight and out of reach while something is laid over it. -->
+  <div class="empty" class:covered={busy || value} inert={busy || Boolean(value)}>
     <svg class="glyph" viewBox="0 0 48 48" aria-hidden="true">
       <path d="M8 12h32v24H8z" />
       <path d="m8 31 9-9 7 7 6-6 10 10" />
@@ -122,7 +125,31 @@
         <input type="file" accept={ACCEPTED_TYPES.join(',')} onchange={(e) => take(e.currentTarget.files[0])} />
       </label>
     </p>
-    <p class="fine">PNG, JPEG or WebP. It is shrunk and stripped of hidden details before it is sent.</p>
+    <p class="fine">{fine}</p>
+  </div>
+
+  {#if busy}
+    <p class="over-box status">Preparing image…</p>
+  {:else if value}
+    <div class="over-box chosen" in:pop={{ from: 0.92 }}>
+      <img src={previewUrl} alt="Your screenshot" draggable="false" />
+      <div class="about">
+        <span class="facts">
+          <span class="chip {chip.tone}">{chip.text}</span>
+          <span class="numeric">{value.width} × {value.height} · {formatBytes(value.blob.size)}</span>
+        </span>
+        {#if note}
+          <span class="note" aria-live="polite">{note}</span>
+        {/if}
+        <span class="actions">
+          <label class="btn small">
+            Replace
+            <input type="file" accept={ACCEPTED_TYPES.join(',')} onchange={(e) => take(e.currentTarget.files[0])} />
+          </label>
+          <button type="button" class="btn small danger" onclick={remove}>Remove</button>
+        </span>
+      </div>
+    </div>
   {/if}
 </div>
 
@@ -133,13 +160,8 @@
 <style>
   .drop {
     position: relative;
-    display: grid;
-    justify-items: center;
-    gap: 6px;
-    padding: 22px 18px;
     border: 1px dashed var(--line-strong);
     background: rgb(5 10 26 / 0.45);
-    text-align: center;
     transition:
       border-color 200ms,
       background 200ms,
@@ -147,9 +169,28 @@
   }
 
   .drop.filled {
-    padding: 12px;
     border-style: solid;
-    text-align: left;
+  }
+
+  /* The prompt sets the size of the box. */
+  .empty {
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 6px;
+    min-height: 136px;
+    padding: 22px 18px;
+    text-align: center;
+  }
+
+  .empty.covered {
+    visibility: hidden;
+  }
+
+  /* The preview, and the note while an image is prepared, lie over the prompt and fill the box. */
+  .over-box {
+    position: absolute;
+    inset: 12px;
   }
 
   .drop.invalid {
@@ -228,21 +269,24 @@
   }
 
   .status {
-    padding: 22px 0;
+    display: grid;
+    place-items: center;
     color: var(--ice-300);
   }
 
   .chosen {
     display: grid;
     grid-template-columns: minmax(0, 200px) 1fr;
+    grid-template-rows: minmax(0, 1fr);
     align-items: center;
     gap: 16px;
-    width: 100%;
   }
 
+  /* The image fits the height the box already has, whatever its shape. */
   .chosen img {
     width: 100%;
-    max-height: 130px;
+    height: 100%;
+    min-height: 0;
     object-fit: contain;
     background: rgb(0 0 0 / 0.35);
   }
@@ -250,9 +294,24 @@
   .about {
     display: grid;
     justify-items: start;
-    gap: 8px;
+    gap: 7px;
+    min-width: 0;
     font-size: 12px;
     color: var(--ice-300);
+  }
+
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+  }
+
+  .note {
+    font-size: 11px;
+    line-height: 1.35;
+    color: var(--ice-200);
+    text-wrap: pretty;
   }
 
   .actions {

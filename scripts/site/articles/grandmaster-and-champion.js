@@ -47,8 +47,8 @@ ${h.bars(
 <h2>Why these numbers are the least certain</h2>
 <p>The curve on this site is fitted to community-submitted datapoints. In ${d.season.name} those are ${h.datapointList()}. ${d.datapoints.some((p) => p.sr >= gm.minSr) ? 'Only a few of them are in Grandmaster or Champion, so the top tiers still lean on the bell-curve shape' : 'None of them are in Grandmaster or Champion, so those tiers are filled in from the bell-curve shape'}, and the far tail is exactly where small differences in the shape matter most. Two things can push the real figures away from the estimate:</p>
 <ul>
-  <li><strong>The real tail may be heavier or lighter.</strong> A normal curve drops off at a fixed rate. If real ratings have a slightly fatter tail, there would be more Grandmaster and Champion players than estimated; a thinner one, fewer.</li>
-  <li><strong>The top of the ladder is capped.</strong> The SR scale stops at ${d.sr(d.ladder.maxSr)}. The fit accounts for this by renormalising the curve over 0 to ${d.sr(d.ladder.maxSr)}, but how the game handles its very best players is not something a bell curve captures exactly.</li>
+  <li><strong>The real tail may be heavier or lighter.</strong> Past its last datapoint the curve drops off the way a bell curve does, at a fixed rate. If real ratings have a slightly fatter tail, there would be more Grandmaster and Champion players than estimated; a thinner one, fewer.</li>
+  <li><strong>The top of the ladder is capped.</strong> The SR scale stops at ${d.sr(d.ladder.maxSr)}. The fit keeps every player inside 0 to ${d.sr(d.ladder.maxSr)}, but how the game handles its very best players is not something a fitted curve captures exactly.</li>
 </ul>
 <p>Datapoints from Grandmaster or Champion players are the most useful thing for tightening these figures. When submissions are open on the site, each one is checked against its screenshot before it counts. ${h.a('how-the-estimate-works', 'How the estimate is made')} covers the method in full.</p>
 

@@ -50,7 +50,7 @@ function questions(d, h) {
     },
     {
       q: 'How is the rank distribution estimated?',
-      a: `<p>Each datapoint says what share of players a rank is better than. Converted to z-scores, those points lie on a straight line against SR if ratings follow a bell curve, so the site fits a weighted least-squares line through them and keeps the curve inside the SR range. The details are in ${h.a('how-the-estimate-works', 'how the estimate is made')}.</p>`,
+      a: `<p>Each datapoint says what share of players a rank is better than. Converted to z-scores, those points lie on a straight line against SR if ratings follow a bell curve. ${d.isBellFit ? 'For a season with a few community datapoints, such as the current one, the site fits a weighted least-squares line through them, which gives the bell curve closest to the data' : 'For a season whose distribution is known across the ladder, such as the current one, the site draws a smooth curve through every point instead of a straight line, so the result takes the shape of the data'}, and keeps the curve inside the SR range. The details are in ${h.a('how-the-estimate-works', 'how the estimate is made')}.</p>`,
     },
     {
       q: 'How accurate are the percentages?',

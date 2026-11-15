@@ -29,6 +29,9 @@ export function createLocalBackend(bundledSeasons) {
     datapoints: season.datapoints.map((point) => ({ id: crypto.randomUUID(), ...point })),
   });
 
+  /** A bundled season file's contents as text, to tell when the file has been edited. */
+  const contentsOf = (season) => JSON.stringify(season);
+
   function load() {
     let saved = null;
     try {
@@ -41,6 +44,8 @@ export function createLocalBackend(bundledSeasons) {
         seasons: bundledSeasons.map(seed),
         /** Ids of the bundled seasons that have been copied in, so each is only ever copied once. */
         seeded: bundledSeasons.map((season) => season.id),
+        /** Each bundled season file as it was when last copied in, by id. */
+        files: Object.fromEntries(bundledSeasons.map((season) => [season.id, contentsOf(season)])),
         submissions: [],
         /** Proof images by path. */
         proofs: {},
@@ -52,11 +57,24 @@ export function createLocalBackend(bundledSeasons) {
     // saved is copied in. One the admin has since deleted is not brought
     // back: `seeded` remembers it was already copied. (Data saved before
     // `seeded` existed counts the seasons it holds as the ones copied.)
-    const db = { proofs: {}, seeded: saved.seasons.map((season) => season.id), ...saved };
+    //
+    // A season file edited since it was copied replaces the copy here, so
+    // the file is what shows; changes made to that season in the admin
+    // panel are dropped. (Data saved before `files` existed cannot tell,
+    // and takes every file once.)
+    const db = { proofs: {}, seeded: saved.seasons.map((season) => season.id), files: {}, ...saved };
     for (const season of bundledSeasons) {
-      if (db.seeded.includes(season.id)) continue;
-      db.seeded.push(season.id);
-      if (!db.seasons.some((existing) => existing.id === season.id)) db.seasons.push(seed(season));
+      const contents = contentsOf(season);
+      const edited = db.files[season.id] !== contents;
+      db.files[season.id] = contents;
+
+      const at = db.seasons.findIndex((existing) => existing.id === season.id);
+      if (!db.seeded.includes(season.id)) {
+        db.seeded.push(season.id);
+        if (at < 0) db.seasons.push(seed(season));
+      } else if (edited && at >= 0) {
+        db.seasons[at] = seed(season);
+      }
     }
     return db;
   }
@@ -99,7 +117,7 @@ export function createLocalBackend(bundledSeasons) {
 
     listSeasons: operation(() => db.seasons),
 
-    submitDatapoint: operation(async ({ seasonId, rank, betterThan, proof }) => {
+    submitDatapoint: operation(async ({ seasonId, rank, sr = null, betterThan, proof }) => {
       findSeason(seasonId);
       const proofPath = `${crypto.randomUUID()}.${proof.extension}`;
       db.proofs[proofPath] = await toDataUrl(proof.blob);
@@ -107,6 +125,7 @@ export function createLocalBackend(bundledSeasons) {
         id: crypto.randomUUID(),
         seasonId,
         rank,
+        sr,
         betterThan,
         proofPath,
         status: 'pending',
@@ -148,12 +167,14 @@ export function createLocalBackend(bundledSeasons) {
       (id, weight = 1) => {
         const submission = findSubmission(id);
         if (submission.status !== 'pending') throw new Error('That submission was already reviewed.');
+        // A submission that says how far through the division it was becomes a datapoint at that exact SR.
+        const exact = submission.sr !== null && submission.sr !== undefined;
         findSeason(submission.seasonId).datapoints.push({
           id: crypto.randomUUID(),
-          rank: submission.rank,
+          ...(exact ? { sr: submission.sr } : { rank: submission.rank }),
           betterThan: submission.betterThan,
           weight,
-          note: 'Community submission',
+          note: exact ? `Community submission (${submission.rank})` : 'Community submission',
         });
         submission.status = 'approved';
         submission.reviewedAt = new Date().toISOString();

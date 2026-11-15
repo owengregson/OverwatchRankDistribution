@@ -45,7 +45,7 @@ export function fitNormal(points, { minSr, maxSr }) {
 
   return {
     type: 'normal',
-    label: 'Bell curve',
+    /** The bell before it is cut off at the ends of the scale. The model's own `mean` and `sd` describe the curve as drawn. */
     params: { mean, sd },
     minSr,
     maxSr,
