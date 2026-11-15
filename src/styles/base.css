@@ -21,6 +21,9 @@ body {
   letter-spacing: 0.01em;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* Nothing on the page is selectable, except text being typed into a field. */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 h1,
@@ -35,6 +38,12 @@ input {
   font: inherit;
   color: inherit;
   letter-spacing: inherit;
+}
+
+input,
+textarea {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 button {
