@@ -18,24 +18,38 @@ import { roleById } from '../../data/roles.js';
 /**
  * The highest figure the game shows. Its "higher ranked than" line is in
  * whole percents, so every player in the top 1% reads 99, wherever in that
- * 1% they are: past this figure there is nothing to measure with.
+ * 1% they are: a Champion reads 99 just as the first Grandmaster does. A
+ * reading of 99 means "99 or more", and past it there is nothing to
+ * measure with.
  *
- * So the curve is only ever fitted up to where the top 1% begins. The
- * lowest datapoint at this figure or above is the mark of that, and is
- * fitted like any other. Every datapoint above it that is also at this
- * figure or more is kept, but no curve is fitted to it (`counts` is
- * false), whatever figure it gives: 99 off a rank screen, or 99.3 off a
- * published graph. From the mark upwards the curve is therefore the bell
- * tail that carries on from the datapoints below it, in every season and
- * with every model.
+ * So the curve is only ever fitted up to where the top 1% begins:
+ *
+ * - The lowest datapoint at this figure or above is the mark of that.
+ *   Every datapoint above it that is also at this figure or more is kept,
+ *   but no curve is fitted to it (`counts` is false), whatever figure it
+ *   gives: 99 off a rank screen, or 99.3 off a published graph.
+ * - A mark that reads exactly this figure is a floor (`floor` is true),
+ *   not a measurement: all it says is that at least 99% of players are
+ *   below it. When the curve through the other datapoints already puts
+ *   that many below it, it says nothing new and is left out as well; when
+ *   that curve falls short, it is fitted, at 99 (see buildSeasonModel).
+ *   Without this a lone 99 from high in Champion would be taken for the
+ *   start of the top 1% and flatten the whole curve.
+ * - A mark above this figure (99.7 off a published graph) is a
+ *   measurement, and is fitted like any other datapoint.
+ *
+ * From the mark upwards the curve is therefore the bell tail that carries
+ * on from the datapoints below it, in every season and with every model.
  */
 export const HIGHEST_READING = 99;
 
 /**
  * Validates raw datapoints and resolves them onto the SR axis.
- * @returns {{ sr: number, p: number, weight: number, label: string, counts: boolean, id?: string, role?: string, note?: string }[]}
- *          sorted by SR, with `p` as a 0–1 fraction. `counts` is whether
- *          the curve is fitted to the datapoint (see HIGHEST_READING).
+ * @returns {{ sr: number, p: number, weight: number, label: string, counts: boolean, floor: boolean, id?: string, role?: string, note?: string }[]}
+ *          sorted by SR, with `p` as a 0–1 fraction. `counts` is false for
+ *          a datapoint above the mark that no curve is fitted to, and
+ *          `floor` is true for a mark that is only a floor (see
+ *          HIGHEST_READING).
  */
 export function resolveDatapoints(rawPoints, ladder) {
   if (!Array.isArray(rawPoints)) {
@@ -79,6 +93,7 @@ export function resolveDatapoints(rawPoints, ladder) {
         sr,
         p: percent / 100,
         atHighestReading: percent >= HIGHEST_READING,
+        isHighestReading: percent === HIGHEST_READING,
         weight,
         label: division ? division.name : `${sr} SR`,
         role: raw.role ?? undefined,
@@ -86,9 +101,10 @@ export function resolveDatapoints(rawPoints, ladder) {
       };
     })
     .sort((a, b) => a.sr - b.sr)
-    .map(({ atHighestReading, ...point }) => {
+    .map(({ atHighestReading, isHighestReading, ...point }) => {
       const counts = !(atHighestReading && marked);
+      const floor = isHighestReading && !marked;
       marked ||= atHighestReading;
-      return { ...point, counts };
+      return { ...point, counts, floor };
     });
 }

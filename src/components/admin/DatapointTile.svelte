@@ -35,11 +35,30 @@
 
   /**
    * `ladder` is the ladder of the season these datapoints belong to.
-   * `counts` is false for a datapoint the curve is not fitted to: one at
-   * the game's highest figure, 99%, or more, above the lowest datapoint
-   * that is (see HIGHEST_READING in lib/model/datapoints.js).
+   * `leftOut` says why the curve is not fitted to this datapoint, and is
+   * null when it is (see HIGHEST_READING in lib/model/datapoints.js):
+   *
+   *   'above'  it is at the game's highest figure, 99%, or more, above the
+   *            lowest datapoint that is
+   *   'floor'  it is that lowest one, it reads 99%, and the curve through
+   *            the other datapoints is already above 99% at its rank
    */
-  let { seasonId, ladder, point = null, model = null, counts = true } = $props();
+  let { seasonId, ladder, point = null, model = null, leftOut = null } = $props();
+
+  /** What to say about a datapoint that is left out: a tooltip phrase, a chip, and the chip's explanation. */
+  const LEFT_OUT = {
+    above: {
+      summary: 'not fitted: above the 99% mark',
+      chip: 'Above the 99% mark · not fitted',
+      why: 'The game shows whole percents and stops at 99, so the top 1% cannot be measured. The lowest datapoint at 99% or more marks where it begins; the curve is not fitted to the ones above it, and is a bell tail from there up.',
+    },
+    floor: {
+      summary: 'not fitted: the curve is already above 99% here',
+      chip: 'Reads 99% · curve already above it',
+      why: 'The game shows 99% for everyone in the top 1%, so this reading only says that at least 99% of players are below this rank. The curve through the other datapoints already says more than that here, so this one adds nothing and is not fitted. It would be fitted, at 99%, if that curve fell short of it.',
+    },
+  };
+  const aside = $derived(LEFT_OUT[leftOut] ?? null);
 
   /** Where the stored datapoint sits, as the three controls show it; null if its rank is not on this ladder. */
   function placeOf(stored) {
@@ -105,7 +124,7 @@
       draft.betterThan === null ? null : `better than ${draft.betterThan}%`,
       roleById(draft.role)?.name,
       curve === null ? null : `curve says ${curve.toFixed(2)}%`,
-      counts ? null : 'not fitted: above the 99% mark',
+      aside?.summary,
     ]
       .filter(Boolean)
       .join(' · '),
@@ -174,7 +193,7 @@
     class="tile"
     class:adding={!point}
     class:dirty
-    class:left-out={!counts}
+    class:left-out={aside}
     style:--tier={tier.color}
     aria-expanded="false"
     aria-label={point ? `Edit datapoint: ${summary}` : 'Add a datapoint'}
@@ -202,13 +221,8 @@
       {#if unplaced}
         <span class="chip warn">"{point.rank}" is not on this season's ladder</span>
       {/if}
-      {#if !counts}
-        <span
-          class="chip"
-          title="The game shows whole percents and stops at 99, so the top 1% cannot be measured. The lowest datapoint at 99% or more marks where it begins; the curve is not fitted to the ones above it, and is a bell tail from there up."
-        >
-          Above the 99% mark · not fitted
-        </span>
+      {#if aside}
+        <span class="chip" title={aside.why}>{aside.chip}</span>
       {/if}
       <span class="actions">
         {#if point}

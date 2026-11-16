@@ -21,11 +21,15 @@
   );
   const median = $derived(fit.model?.quantile(0.5));
   /**
-   * Ids of the datapoints the curve is not fitted to: those at the game's
-   * highest figure, 99%, or more, above the lowest that is (see
-   * HIGHEST_READING in lib/model/datapoints.js).
+   * The datapoints the curve is not fitted to, by id, with why: 'above' for
+   * one at the game's highest figure, 99%, or more that is above the lowest
+   * that is, and 'floor' for that lowest one when it reads 99% and the
+   * curve is already above it (see HIGHEST_READING in
+   * lib/model/datapoints.js).
    */
-  const leftOut = $derived(new Set(fit.model?.points.filter((pt) => !pt.counts).map((pt) => pt.id)));
+  const leftOut = $derived(
+    new Map(fit.model?.points.filter((pt) => !pt.counts).map((pt) => [pt.id, pt.floor ? 'floor' : 'above'])),
+  );
 </script>
 
 <div class="toolbar">
@@ -64,15 +68,15 @@
 <p class="hint">
   Each badge is a datapoint, lowest rank first. Open one to see and edit it; the last tile adds one.
   {#if leftOut.size}
-    A faded badge is in the top 1%, above the lowest datapoint that is: the curve is not fitted to it, and is a bell tail from
-    that lowest one up.
+    A faded badge is a datapoint in the top 1% that the curve is not fitted to: the game shows 99% for all of the top 1%, so
+    such a reading only says "at least 99%". Open one to see why it is left out.
   {/if}
 </p>
 
 <!-- Closed tiles pack into rows; an open one takes a row to itself (see DatapointTile). -->
 <div class="points">
   {#each points as point (point.id ?? `${point.rank ?? point.sr}-${point.betterThan}`)}
-    <DatapointTile seasonId={season.id} {ladder} {point} model={fit.model} counts={!leftOut.has(point.id)} />
+    <DatapointTile seasonId={season.id} {ladder} {point} model={fit.model} leftOut={leftOut.get(point.id) ?? null} />
   {/each}
 
   <DatapointTile seasonId={season.id} {ladder} />

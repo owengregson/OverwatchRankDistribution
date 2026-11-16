@@ -507,24 +507,55 @@ describe('the game\'s highest reading, 99%', () => {
     { rank: 'Master 3', betterThan: 97 },
     { rank: 'Master 2', betterThan: 98 },
   ];
-  const mark = { rank: 'Grandmaster 5', betterThan: 99 };
+  // The datapoints below it put under 99% of players beneath Master 1, so a 99 there is news to the curve.
+  const mark = { rank: 'Master 1', betterThan: 99 };
   const above = [
     { rank: 'Grandmaster 3', betterThan: 99 },
     { sr: 4659, betterThan: 99, weight: 3 },
     { rank: 'Champion 1', betterThan: 99 },
   ];
-  const SAMPLES = [0, 800, 2500, 3700, 4000, 4200, 4659, 4900, 4999];
+  const SAMPLES = [0, 800, 2500, 3700, 3900, 4000, 4200, 4659, 4900, 4999];
 
   for (const type of ['normal', 'freeform']) {
     describe(`${type} curve`, () => {
       const build = (datapoints) => buildSeasonModel({ model: type, datapoints }, ladder);
+      const unmarked = build(below);
       const marked = build([...below, mark]);
       // Given out of order, to show it is the lowest that is kept and not the first.
       const crowded = build([above[1], ...below, above[2], mark, above[0]]);
 
       it('fits the lowest datapoint reading 99% and no other', () => {
+        expect(unmarked.cdf(3900)).toBeLessThan(0.99);
         expect(crowded.points.map((pt) => pt.counts)).toEqual([true, true, true, true, false, false, false]);
-        expect(crowded.points[3].label).toBe('Grandmaster 5');
+        expect(crowded.points[3].label).toBe('Master 1');
+        expect(crowded.points.map((pt) => pt.floor)).toEqual([false, false, false, true, false, false, false]);
+        expect(marked.cdf(3900)).toBeGreaterThan(unmarked.cdf(3900));
+      });
+
+      it('takes a 99% reading for "at least 99%", so one from high up the ladder changes nothing', () => {
+        // A Champion reads 99% like everyone else in the top 1%. Fitted as exactly 99%, it would flatten the curve.
+        for (const lone of above) {
+          const model = build([...below, lone]);
+          expect(model.points.at(-1)).toMatchObject({ floor: true, counts: false });
+          expect(model.points.at(-1).fitted).toBeGreaterThan(0.99);
+          for (const sr of SAMPLES) {
+            expect(model.cdf(sr), `${sr} SR`).toBe(unmarked.cdf(sr));
+            expect(model.pdf(sr), `${sr} SR`).toBe(unmarked.pdf(sr));
+          }
+          expect(model.sd).toBe(unmarked.sd);
+          expect(model.rmse).toBe(unmarked.rmse);
+        }
+      });
+
+      it('changes nothing with several of them either: only the lowest could matter', () => {
+        const model = build([...below, ...above]);
+        expect(model.points.map((pt) => pt.counts)).toEqual([true, true, true, false, false, false]);
+        for (const sr of SAMPLES) expect(model.cdf(sr), `${sr} SR`).toBe(unmarked.cdf(sr));
+      });
+
+      it('falls back on a 99% reading when the other datapoints cannot make a curve without it', () => {
+        const model = build([below[1], above[0]]);
+        expect(model.points.map((pt) => pt.counts)).toEqual([true, true]);
       });
 
       it('is the same curve however many more read 99% above it', () => {
@@ -550,14 +581,21 @@ describe('the game\'s highest reading, 99%', () => {
 
       it('fits the mark at the figure it gives, whole or not', () => {
         const published = build([...below, { ...mark, betterThan: 99.4 }, ...above]);
-        expect(published.points[3].counts).toBe(true);
-        if (type === 'freeform') expect(published.cdf(4000)).toBeCloseTo(0.994, 9);
-        expect(published.cdf(4000)).toBeGreaterThan(marked.cdf(4000));
+        expect(published.points[3]).toMatchObject({ counts: true, floor: false });
+        if (type === 'freeform') expect(published.cdf(3900)).toBeCloseTo(0.994, 9);
+        expect(published.cdf(3900)).toBeGreaterThan(marked.cdf(3900));
+      });
+
+      it('fits a figure over 99 even where the curve is already above it: it is a measurement, not a floor', () => {
+        const high = build([...below, { rank: 'Champion 1', betterThan: 99.2 }]);
+        expect(high.points.at(-1)).toMatchObject({ counts: true, floor: false });
+        expect(unmarked.cdf(4900)).toBeGreaterThan(0.992);
+        expect(high.cdf(4900)).toBeLessThan(unmarked.cdf(4900));
       });
 
       it('still fits a figure under 99 that sits above the mark', () => {
         const points = build([...below, mark, { rank: 'Grandmaster 4', betterThan: 98.9 }]).points;
-        expect(points.at(-1).counts).toBe(true);
+        expect(points.at(-1)).toMatchObject({ counts: true, floor: false });
       });
     });
   }
@@ -567,9 +605,28 @@ describe('the game\'s highest reading, 99%', () => {
     // A bell curve is a straight line in z: from the mark up, each 100 SR adds the same z.
     // (Short of the top division, where what lies past 5,000 SR is stacked.)
     const z = (sr) => probit(model.cdf(sr));
-    const step = z(4100) - z(4000);
+    const step = z(4000) - z(3900);
     expect(step).toBeGreaterThan(0);
-    for (const sr of [4100, 4300, 4700]) expect(z(sr + 100) - z(sr)).toBeCloseTo(step, 6);
+    for (const sr of [4000, 4300, 4700]) expect(z(sr + 100) - z(sr)).toBeCloseTo(step, 6);
+  });
+
+  it('keeps the curve Season 5 has when a Champion 4 reading of 99% is added to it', () => {
+    const before = buildSeasonModel(season, ladder);
+    const after = buildSeasonModel(
+      { ...season, datapoints: [...season.datapoints, { rank: 'Champion 4', betterThan: 99, role: 'tank' }] },
+      ladder,
+    );
+    expect(after.points.at(-1)).toMatchObject({ label: 'Champion 4', floor: true, counts: false });
+    expect(after.sd).toBe(before.sd);
+    expect(after.quantile(0.5)).toBe(before.quantile(0.5));
+  });
+
+  it('still starts Season 4\'s bell tail at Grandmaster 5, which its graph puts at 99%', () => {
+    // The curve through the divisions below reaches a little under 99% there, so the 99 is fitted.
+    const model = buildSeasonModel(season4, ladder);
+    const grandmaster5 = model.points.find((pt) => pt.label === 'Grandmaster 5');
+    expect(grandmaster5).toMatchObject({ floor: true, counts: true });
+    expect(grandmaster5.fitted).toBeCloseTo(0.99, 9);
   });
 
   it('leaves a season with one datapoint in the top 1% as it was', () => {

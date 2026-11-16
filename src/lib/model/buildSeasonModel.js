@@ -46,6 +46,32 @@ function moments({ cdf, minSr, maxSr }) {
 }
 
 /**
+ * Fits a curve to the datapoints that count, whichever curve it is.
+ *
+ * One of them may be a floor: the lowest reading of the game's highest
+ * figure, 99%, which only says that at least 99% of players are below it
+ * (see HIGHEST_READING). The curve is first fitted without it. If that
+ * curve already puts 99% or more below the floor, the floor has nothing to
+ * add and is left out; if it falls short, or the other datapoints cannot
+ * make a curve by themselves, the floor is fitted like any other, at 99.
+ *
+ * @returns {{ model: object, fittedTo: object[] }} the curve, and the datapoints it was fitted to
+ */
+function fitCounted(points, fit, range) {
+  const floor = points.find((pt) => pt.floor);
+  if (floor) {
+    const others = points.filter((pt) => pt !== floor);
+    try {
+      const model = fit(others, range);
+      if (model.cdf(floor.sr) >= floor.p) return { model, fittedTo: others };
+    } catch {
+      // Too few without it, or they disagree: fit them all, and let that say what is wrong.
+    }
+  }
+  return { model: fit(points, range), fittedTo: points };
+}
+
+/**
  * Builds the distribution for a season purely from its datapoints.
  *
  * @param {{ id: string, model?: string, datapoints: object[] }} season
@@ -62,9 +88,10 @@ export function buildSeasonModel(season, ladder) {
   const lowest = ladder.divisions[0];
   const highest = ladder.divisions.at(-1);
   // Whichever curve it is, it is fitted only to the datapoints that count: of those reading
-  // the game's highest figure, 99%, that is the lowest one alone (see HIGHEST_READING).
-  const model = chosen.fit(
+  // the game's highest figure, 99%, that is at most the lowest one (see HIGHEST_READING).
+  const { model, fittedTo } = fitCounted(
     resolved.filter((pt) => pt.counts),
+    chosen.fit,
     {
       minSr: ladder.minSr,
       maxSr: ladder.maxSr,
@@ -74,11 +101,12 @@ export function buildSeasonModel(season, ladder) {
   );
 
   // Keep each datapoint alongside what the fitted curve says at the same SR,
-  // so the UI can show how well the model agrees with the data. The miss is
-  // measured over the datapoints the curve was fitted to.
+  // so the UI can show how well the model agrees with the data. `counts` is
+  // whether the curve was fitted to it, and the miss is measured over those
+  // that were.
   const points = resolved.map((pt) => {
     const fitted = model.cdf(pt.sr);
-    return { ...pt, fitted, residual: fitted - pt.p };
+    return { ...pt, counts: fittedTo.includes(pt), fitted, residual: fitted - pt.p };
   });
   const counted = points.filter((pt) => pt.counts);
   const totalWeight = counted.reduce((sum, pt) => sum + pt.weight, 0);
